@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spell Cards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         /*{{STYLES}}*/
     </style>
@@ -25,7 +26,8 @@
                 if (!textElement || !cardBody) return;
 
                 // Reset to default
-                textElement.style.fontSize = '7pt';
+                let fontSize = 8;
+                textElement.style.fontSize = fontSize + 'pt';
                 textElement.style.lineHeight = '1.2';
 
                 // Calculate actual available space
@@ -40,10 +42,10 @@
 
                 const availableHeight = cardHeight - headerHeight - footerHeight - padding - attrsHeight - 10;
 
-                let fontSize = 7;
-                while (textElement.scrollHeight > availableHeight && fontSize > 4) {
+                while (textElement.scrollHeight > availableHeight && fontSize > 3) {
                     fontSize -= 0.1;
                     textElement.style.fontSize = fontSize + 'pt';
+                    textElement.style.lineHeight = '1'
                 }
             });
         }
