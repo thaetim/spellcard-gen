@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spell Cards</title>
     <style>
         /*{{STYLES}}*/
@@ -11,6 +12,80 @@
 
 <body>
     <!--{{CARDS}}-->
+
+    <script>
+        function autoSizeCardText() {
+            const cards = document.querySelectorAll('.card');
+
+            cards.forEach((card) => {
+                const textElement = card.querySelector('.card-text');
+                const cardBody = card.querySelector('.card-body');
+                const cardHeader = card.querySelector('.card-header');
+                const cardFooter = card.querySelector('.card-footer');
+                if (!textElement || !cardBody) return;
+
+                // Reset to default
+                textElement.style.fontSize = '7pt';
+                textElement.style.lineHeight = '1.2';
+
+                // Calculate actual available space
+                const cardHeight = card.offsetHeight;
+                const headerHeight = cardHeader ? cardHeader.offsetHeight : 0;
+                const footerHeight = cardFooter ? cardFooter.offsetHeight : 0;
+                const padding = 10; // card-body padding
+
+                // Get height of attributes table
+                const attrs = cardBody.querySelector('.card-attrs');
+                const attrsHeight = attrs ? attrs.offsetHeight : 0;
+
+                const availableHeight = cardHeight - headerHeight - footerHeight - padding - attrsHeight - 10;
+
+                let fontSize = 7;
+                while (textElement.scrollHeight > availableHeight && fontSize > 4) {
+                    fontSize -= 0.1;
+                    textElement.style.fontSize = fontSize + 'pt';
+                }
+            });
+        }
+
+        function waitForLayoutStable(callback, interval = 200, stableCount = 3) {
+            let lastHeightSum = 0;
+            let stableTicks = 0;
+
+            const timer = setInterval(() => {
+                const totalHeight = [...document.querySelectorAll('.card-text')]
+                    .map(e => e.scrollHeight)
+                    .reduce((a, b) => a + b, 0);
+
+                if (totalHeight === lastHeightSum) {
+                    stableTicks++;
+                } else {
+                    stableTicks = 0;
+                    lastHeightSum = totalHeight;
+                }
+
+                if (stableTicks >= stableCount) {
+                    clearInterval(timer);
+                    callback();
+                }
+            }, interval);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // First run soon after DOM ready
+            autoSizeCardText();
+
+            // Wait until layout stops changing, then rerun for final sizing
+            waitForLayoutStable(() => {
+                console.log("Layout stabilized — final autoSizeCardText()");
+                autoSizeCardText();
+            });
+        });
+
+        // Re-adjust if browser window resizes
+        window.addEventListener('resize', autoSizeCardText);
+    </script>
+
 </body>
 
 </html>
