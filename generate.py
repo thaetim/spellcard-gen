@@ -38,16 +38,31 @@ def generate_spell_card(spell, card_template):
     if hl:
         text += f"<br><br><b>At Higher Levels:</b> {hl}"
 
+    # source
+    source = spell.get('Source', '')
+    CORE_SOURCES = ['PHB', 'SRD', 'DMG']
+    source = '' if source in CORE_SOURCES else f"({source})"
+
+    # components
+    components = spell.get('Components', '')
+    if ' M (' in components:
+        components = components.replace(' M (','\nM (')
+
+    # duration
+    duration = spell.get('Duration', '')
+    if 'up to' in duration:
+        duration = duration.replace(', ',',\n')
+
     mapping = {
         "CARD_ID": card_id,
         "PRIMARY_CLASS": primary_class,
         "NAME": spell['Name'],
         "CASTING": spell.get('Casting Time', ''),
         "RANGE": spell.get('Range', ''),
-        "COMPONENTS": spell.get('Components', ''),
-        "DURATION": spell.get('Duration', ''),
+        "COMPONENTS": components,
+        "DURATION": duration,
         "TEXT": text,
-        "SOURCE": spell.get('Source', ''),
+        "SOURCE": source,
         "SPELL_TYPE": spell_type
     }
 
