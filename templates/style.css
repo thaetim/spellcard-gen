@@ -157,6 +157,14 @@ body {
     --cell-border: #fff;
 }
 
+/* [class*="class-"] {
+    --header-color: #5b5b5b;;
+    --footer-color: #5b5b5b;;
+    --card-border: #000000;;
+} */
+
+/* # TODO: set colors as per magic school instead of class (? or a blend of the two?) */
+
 .class-Wizard {
     --header-color: #3A64A8;
     --header-bg: url("textures/wizard.png");
