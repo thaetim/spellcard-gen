@@ -1,0 +1,147 @@
+@page {
+    size: A4;
+    margin: 0;
+}
+
+body {
+    margin: 0;
+    padding: 10mm;
+    background: #fff;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 0;
+}
+
+.card {
+    width: 63mm;
+    height: 88mm;
+    box-sizing: border-box;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1pt solid var(--card-border, #000);
+    background: #fff;
+    overflow: hidden;
+    page-break-inside: avoid;
+}
+
+.card-header {
+    background: var(--header-color, #304A90);
+    background-image: var(--header-bg, none);
+    background-blend-mode: multiply;
+    color: white;
+    text-align: center;
+    padding: 4pt 3pt 2pt 3pt;
+    font-family: "Arial Narrow", Arial, sans-serif;
+    font-weight: bold;
+    font-size: 16pt;
+    border-bottom: 1pt solid var(--cell-border, #fff);
+}
+
+.card-source {
+    font-size: 7pt;
+    opacity: 0.85;
+}
+
+.card-body {
+    flex: 1;
+    font-family: Arial, sans-serif;
+    font-size: 7pt;
+    padding: 4pt 5pt 0 5pt;
+    color: #000;
+}
+
+.card-attrs {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 3pt;
+    align-content: center;
+}
+
+.card-attrs td {
+    padding: 1pt 2pt;
+    vertical-align: top;
+    border-bottom: 0.5pt solid #eee;
+}
+
+.card-attrs em {
+    display: block;
+    font-style: italic;
+    color: #555;
+    font-size: 7pt;
+    line-height: 1.1;
+}
+
+.card-attrs tr td:nth-child(odd) {
+    width: 35%;
+}
+
+.card-attrs tr td:nth-child(even) {
+    width: 15%;
+}
+
+.card-row {
+    border-bottom: 0.5pt solid #eee;
+    margin-bottom: 1pt;
+}
+
+.card-text {
+    margin-top: 3pt;
+    line-height: 1.2;
+}
+
+.card-footer {
+    border-top: 1pt solid var(--cell-border, #fff);
+    background: var(--footer-color, #304A90);
+    background-image: var(--footer-bg, none);
+    background-blend-mode: multiply;
+    color: white;
+    font-size: 7pt;
+    padding: 1pt 3pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.need {
+    color: #b00;
+    font-weight: bold;
+}
+
+:root {
+    --cell-border: #fff;
+}
+
+.class-wizard {
+    --header-color: #3A64A8;
+    --header-bg: url("textures/wizard.png");
+    --footer-color: #3A64A8;
+    --footer-bg: url("textures/wizard.png");
+    --card-border: #2A4885;
+}
+
+.class-warlock {
+    --header-color: #502F73;
+    --header-bg: url("textures/warlock.png");
+    --footer-color: #502F73;
+    --footer-bg: url("textures/warlock.png");
+    --card-border: #3A2153;
+}
+
+.class-cleric {
+    --header-color: #A07A3A;
+    --header-bg: url("textures/cleric.png");
+    --footer-color: #A07A3A;
+    --footer-bg: url("textures/cleric.png");
+    --card-border: #7C5E2C;
+}
+
+.class-sorcerer {
+    --header-color: #A33A3A;
+    --header-bg: url("textures/sorcerer.png");
+    --footer-color: #A33A3A;
+    --footer-bg: url("textures/sorcerer.png");
+    --card-border: #7C2C2C;
+}
