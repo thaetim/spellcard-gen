@@ -3,9 +3,9 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 WATCH_PATHS = [
-    'generate.py',
+    '.',
     'templates/',
-    'data/Spells.csv'
+    'data'
 ]
 
 class WatchHandler(FileSystemEventHandler):
