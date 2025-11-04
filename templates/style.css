@@ -33,10 +33,11 @@ body {
     background-blend-mode: multiply;
     color: white;
     text-align: center;
-    padding: 4pt 3pt 2pt 3pt;
-    font-family: "Arial Narrow", Arial, sans-serif;
-    font-weight: bold;
-    font-size: 14pt;
+    /* padding: 4pt 3pt 2pt 3pt; */
+    font-family: 'Cormorant SC', serif;
+    font-weight: 500;
+    letter-spacing: 0.3pt;
+    font-size: 17pt;
     border-bottom: 1pt solid var(--cell-border, #fff);
 }
 
@@ -48,7 +49,7 @@ body {
 .card-body {
     flex: 1;
     font-family: Arial, sans-serif;
-    font-size: 7pt;
+    font-size: 9pt;
     padding: 4pt 5pt 0 5pt;
     color: #000;
 }
@@ -62,6 +63,32 @@ body {
     max-height: 100%; /* But constrain to available space */
 }
 
+.card-attr-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--footer-color, #304A90);
+    background-image: var(--footer-bg, none);
+    background-blend-mode: multiply;
+    color: white;
+    font-size: 7pt;
+    font-style: italic;
+    padding: 1pt 3pt;
+    margin: 1pt 0 3pt 0;
+    border-radius: 2pt;
+}
+
+.card-material-components {
+    flex: 1;
+    text-align: left;
+    margin-right: 5pt;
+}
+
+.card-duration-info {
+    flex-shrink: 0;
+    text-align: right;
+}
+
 .card-attrs {
     width: 100%;
     border-collapse: collapse;
@@ -72,19 +99,28 @@ body {
 }
 
 .card-attrs td {
-    padding: 1pt 2pt;
-    vertical-align: top;
+    position: relative;
+    padding: 2pt 3pt 6pt 3pt; /* bottom padding gives room for label */
+    text-align: center;
+    vertical-align: middle;
     border-bottom: 0.5pt solid #eee;
+    line-height: 1.2;
 }
 
 .card-attrs em {
-    display: block;
+    position: absolute;
+    bottom: 1pt;               /* snug at the bottom of cell */
+    left: 0;
+    width: 100%;
     font-style: italic;
     color: #555;
     font-size: 5pt;
     line-height: 1.1;
     text-align: center;
+    margin: 0;
+    pointer-events: none;      /* prevent accidental selection overlap */
 }
+
 
 .card-attrs tr td:nth-child(odd) {
     width: 15%;
@@ -121,7 +157,7 @@ body {
     --cell-border: #fff;
 }
 
-.class-wizard {
+.class-Wizard {
     --header-color: #3A64A8;
     --header-bg: url("textures/wizard.png");
     --footer-color: #3A64A8;
@@ -129,7 +165,7 @@ body {
     --card-border: #2A4885;
 }
 
-.class-warlock {
+.class-Warlock {
     --header-color: #502F73;
     --header-bg: url("textures/warlock.png");
     --footer-color: #502F73;
@@ -137,7 +173,7 @@ body {
     --card-border: #3A2153;
 }
 
-.class-cleric {
+.class-Cleric {
     --header-color: #A07A3A;
     --header-bg: url("textures/cleric.png");
     --footer-color: #A07A3A;
@@ -145,7 +181,7 @@ body {
     --card-border: #7C5E2C;
 }
 
-.class-sorcerer {
+.class-Sorcerer {
     --header-color: #A33A3A;
     --header-bg: url("textures/sorcerer.png");
     --footer-color: #A33A3A;

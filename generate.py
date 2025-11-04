@@ -28,30 +28,40 @@ def replace_placeholders(template, mapping):
 
 def generate_spell_card(spell, card_template):
     card_id = generate_card_id(spell['Name'])
-    primary_class = parse_classes(spell.get('Classes', ''))
     lvl = spell.get('Level', '')
-    school = spell.get('School', '')
-    spell_type = f"{school} cantrip" if lvl.lower() == 'cantrip' else f"{lvl}-level {school.lower()}"
+    school = spell.get('School', '').title()
+    spell_type = f"{school} Cantrip" if lvl.lower() in ('cantrip', 0, '0') else f"{lvl}-level {school}"
 
     text = clean_html_text(spell.get('Text', ''))
     hl = clean_html_text(spell.get('At Higher Levels', ''))
     if hl:
         text += f"<br><br><b>At Higher Levels:</b> {hl}"
+    
+    # primary class
+    primary_class = parse_classes(spell.get('Classes', '')).title()
 
     # source
     source = spell.get('Source', '')
     CORE_SOURCES = ['PHB', 'SRD', 'DMG']
     source = '' if source in CORE_SOURCES else f"({source})"
 
-    # components
-    components = spell.get('Components', '')
-    if ' M (' in components:
-        components = components.replace(' M (','\nM (')
+    # components + materials
+    components_raw = spell.get('Components', '')
+    materials_match = re.search(r'\(.*?\)', components_raw)
+    materials = materials_match.group(0)[1:-1] if materials_match else ""
+    components = re.sub(r'\s*M\s*\(.*?\)', ' M', components_raw).strip()
 
-    # duration
-    duration = spell.get('Duration', '')
-    if 'up to' in duration:
-        duration = duration.replace(', ',',\n')
+    # duration + duration info
+    duration_raw = spell.get('Duration', '')
+    duration_info = ""
+
+    if duration_raw.lower().startswith('concentration'):
+        match = re.match(r'Concentration,?\s*(up to .*)', duration_raw, re.IGNORECASE)
+        if match:
+            duration_info = match.group(1).strip()
+        duration = "Concentration"
+    else:
+        duration = duration_raw
 
     mapping = {
         "CARD_ID": card_id,
@@ -61,6 +71,8 @@ def generate_spell_card(spell, card_template):
         "RANGE": spell.get('Range', ''),
         "COMPONENTS": components,
         "DURATION": duration,
+        "MATERIAL_COMPONENTS": materials,
+        "DURATION_INFO": duration_info,
         "TEXT": text,
         "SOURCE": source,
         "SPELL_TYPE": spell_type
