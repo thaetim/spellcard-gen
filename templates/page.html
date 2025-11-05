@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spell Cards</title>
+    <!-- FONTS -->
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:wght@700&display=swap" rel="stylesheet">
     <style>
         /*{{STYLES}}*/
     </style>
@@ -23,29 +25,40 @@
                 const cardBody = card.querySelector('.card-body');
                 const cardHeader = card.querySelector('.card-header');
                 const cardFooter = card.querySelector('.card-footer');
+                const attrs = cardBody?.querySelector('.card-attrs');
+                const attrInfo = cardBody?.querySelector('.card-attr-info');
+
                 if (!textElement || !cardBody) return;
 
                 // Reset to default
                 let fontSize = 8;
+                const lineHeightRatio = 1.2;
                 textElement.style.fontSize = fontSize + 'pt';
-                textElement.style.lineHeight = '1.2';
+                textElement.style.lineHeight = lineHeightRatio;
 
-                // Calculate actual available space
+                // Force layout recalculation
+                void textElement.offsetHeight;
+
+                // Calculate fixed heights
                 const cardHeight = card.offsetHeight;
                 const headerHeight = cardHeader ? cardHeader.offsetHeight : 0;
-                const footerHeight = cardFooter ? cardFooter.offsetHeight : 0;
-                const padding = 10; // card-body padding
-
-                // Get height of attributes table
-                const attrs = cardBody.querySelector('.card-attrs');
+                const footerHeight = cardFooter ? cardFooter.offsetHeight + 5 : 0;
                 const attrsHeight = attrs ? attrs.offsetHeight : 0;
+                const attrInfoHeight = attrInfo ? attrInfo.offsetHeight : 0;
 
-                const availableHeight = cardHeight - headerHeight - footerHeight - padding - attrsHeight - 10;
+                // Account for card-body padding (4pt top, 5pt left/right, 0 bottom)
+                const bodyPadding = 4;
+                // Account for card-text margin-top
+                const textMargin = 3;
 
-                while (textElement.scrollHeight > availableHeight && fontSize > 3) {
+                const availableHeight = cardHeight - headerHeight - footerHeight - attrsHeight - attrInfoHeight - bodyPadding - textMargin - 5;
+
+                // Shrink font until it fits
+                while (textElement.scrollHeight > availableHeight && fontSize > 4) {
                     fontSize -= 0.1;
                     textElement.style.fontSize = fontSize + 'pt';
-                    textElement.style.lineHeight = '1'
+                    textElement.style.lineHeight = fontSize < 6 ? 1.0 : 1.2;
+                    void textElement.offsetHeight; // Force reflow
                 }
             });
         }

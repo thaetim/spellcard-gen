@@ -1,5 +1,7 @@
 import csv, re, os
 
+SYMBOL_CONCENTRATION = '<span class="diamond"><span class="c">C</span></span>'
+
 def clean_html_text(text):
     if not text:
         return ""
@@ -43,7 +45,7 @@ def generate_spell_card(spell, card_template):
     # source
     source = spell.get('Source', '')
     CORE_SOURCES = ['PHB', 'SRD', 'DMG']
-    source = '' if source in CORE_SOURCES else f"({source})"
+    source = '' if source in CORE_SOURCES else f"[{source}]"
 
     # components + materials
     components_raw = spell.get('Components', '')
@@ -52,23 +54,43 @@ def generate_spell_card(spell, card_template):
     components = re.sub(r'\s*M\s*\(.*?\)', ' M', components_raw).strip()
 
     # duration + duration info
-    duration_raw = spell.get('Duration', '')
+    IS_CONCENTRATION = False
+    duration = spell.get('Duration', '')
     duration_info = ""
-
-    if duration_raw.lower().startswith('concentration'):
-        match = re.match(r'Concentration,?\s*(up to .*)', duration_raw, re.IGNORECASE)
+    if duration.lower().startswith('concentration'):
+        IS_CONCENTRATION = True
+        match = re.match(r'Concentration,?\s*(up to .*)', duration, re.IGNORECASE)
         if match:
-            duration_info = match.group(1).strip()
-        duration = "Concentration"
-    else:
-        duration = duration_raw
+            # duration_info = "concentration" # 🌀⚪×🔆 
+            duration = match.group(1).strip() + '&nbsp;' + SYMBOL_CONCENTRATION
+    duration = duration.replace('Instantaneous','Instant')
+    duration = duration.replace('up to ','')
+    duration = duration.replace('minutes','mins')
+    duration = duration.replace('minute','min.')
+    duration = duration.replace('year','yr')
+
+    # range
+    spell_range = spell.get('Range', '')
+    spell_range = spell_range.replace('feet','ft.')
+    spell_range = spell_range.replace(' (','<br>(')
+
+    # casting time
+    casting_time = spell.get('Casting Time', '')
+    casting_time = casting_time.replace('Min','min')
+    casting_time = casting_time.replace('Day','day')
+    casting_time = casting_time.replace('Year','year')
+
+    # name
+    name = spell['Name']
+    # if IS_CONCENTRATION:
+    #     name += '&nbsp;' + SYMBOL_CONCENTRATION
 
     mapping = {
         "CARD_ID": card_id,
         "PRIMARY_CLASS": primary_class,
-        "NAME": spell['Name'],
-        "CASTING": spell.get('Casting Time', ''),
-        "RANGE": spell.get('Range', ''),
+        "NAME": name,
+        "CASTING": casting_time,
+        "RANGE": spell_range,
         "COMPONENTS": components,
         "DURATION": duration,
         "MATERIAL_COMPONENTS": materials,

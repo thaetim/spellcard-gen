@@ -57,10 +57,14 @@ body {
 .card-text {
     margin-top: 3pt;
     line-height: 1.2;
-    font-size: 7pt; /* Default size */
-    overflow: hidden; /* Ensure we can detect overflow */
-    height: auto; /* Let it grow naturally */
-    max-height: 100%; /* But constrain to available space */
+    font-size: 7pt;
+    /* Default size */
+    overflow: hidden;
+    /* Ensure we can detect overflow */
+    height: auto;
+    /* Let it grow naturally */
+    max-height: 100%;
+    /* But constrain to available space */
 }
 
 .card-attr-info {
@@ -100,7 +104,8 @@ body {
 
 .card-attrs td {
     position: relative;
-    padding: 2pt 3pt 6pt 3pt; /* bottom padding gives room for label */
+    padding: 2pt 3pt 6pt 3pt;
+    /* bottom padding gives room for label */
     text-align: center;
     vertical-align: middle;
     border-bottom: 0.5pt solid #eee;
@@ -109,7 +114,8 @@ body {
 
 .card-attrs em {
     position: absolute;
-    bottom: 1pt;               /* snug at the bottom of cell */
+    bottom: 1pt;
+    /* snug at the bottom of cell */
     left: 0;
     width: 100%;
     font-style: italic;
@@ -118,7 +124,8 @@ body {
     line-height: 1.1;
     text-align: center;
     margin: 0;
-    pointer-events: none;      /* prevent accidental selection overlap */
+    pointer-events: none;
+    /* prevent accidental selection overlap */
 }
 
 
@@ -195,4 +202,58 @@ body {
     --footer-color: #A33A3A;
     --footer-bg: url("textures/sorcerer.png");
     --card-border: #7C2C2C;
+}
+
+.diamond {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    /* Inherit font color */
+    font-size: calc(0.5em);
+    /* Inherit font size */
+    position: relative;
+    /* Position for child (C) */
+    transform: translateY(-0.35em) rotate(45deg);
+    /* Rotate to diamond shape */
+    margin-right: 4px;
+    /* Space between diamonds and text */
+    width: 1em;
+    /* Use em to scale with font size */
+    height: 1em;
+    /* Use em to scale with font size */
+}
+
+.diamond::before {
+    content: ' ';
+    /* Creates the diamond */
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: currentColor;
+    /* Use inherited color */
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    /* Set to back */
+}
+
+.diamond .c {
+    filter: invert(1);
+    /* C color to inverted color */
+    transform: rotate(-45deg) translateY(0.05em);
+    z-index: 1;
+    /* Set on top */
+    position: relative;
+    /* Keep C in position */
+    font-size: inherit;
+    /* Inherit font size */
+    font-family: 'Sofia Sans Condensed', sans-serif;
+    /* Fallback to sans-serif */
+    font-weight: 700;
+}
+
+.card-attrs .diamond {
+    transform: translateY(-0.6em) rotate(45deg);
 }
