@@ -138,7 +138,7 @@ def generate_spell_card(spell, card_template):
         match = re.match(r'Concentration,?\s*(up to .*)', duration, re.IGNORECASE)
         if match:
             # duration_info = "concentration" # 🌀⚪×🔆 
-            duration = match.group(1).strip() + '&nbsp;' + SYMBOL_CONCENTRATION
+            duration = match.group(1).strip() # + '&nbsp;' + SYMBOL_CONCENTRATION
     duration = duration.replace('Instantaneous','Instant')
     duration = duration.replace('up to ','')
     duration = duration.replace('minutes','mins')
@@ -150,8 +150,12 @@ def generate_spell_card(spell, card_template):
     spell_range = spell_range.replace('feet','ft.')
     spell_range = spell_range.replace(' (','<br>(')
 
-    # casting time
+    # casting time + ritual
+    IS_RITUAL = False
     casting_time = spell.get('Casting Time', '')
+    ritual_field = spell.get('Ritual', '').lower()
+    if ritual_field in ('yes', 'true', '1'):
+        IS_RITUAL = True
     casting_time = casting_time.replace('Min','min')
     casting_time = casting_time.replace('Day','day')
     casting_time = casting_time.replace('Year','year')
@@ -162,14 +166,22 @@ def generate_spell_card(spell, card_template):
     # if IS_CONCENTRATION:
     #     name += '&nbsp;' + SYMBOL_CONCENTRATION
 
+    # Labels for special attributes
+    casting_label = "Ritual" if IS_RITUAL else "Casting Time"
+    duration_label = "Concentration" if IS_CONCENTRATION else "Duration"
+
     mapping = {
         "CARD_ID": card_id,
         "PRIMARY_CLASS": '', # primary_class,
         "NAME": name,
         "CASTING": casting_time,
+        "CASTING_CLASS": "ritual" if IS_RITUAL else "",
+        "CASTING_LABEL": casting_label,
         "RANGE": spell_range,
         "COMPONENTS": components,
         "DURATION": duration,
+        "DURATION_CLASS": "concentration" if IS_CONCENTRATION else "",
+        "DURATION_LABEL": duration_label,
         "MATERIAL_COMPONENTS": materials,
         "DURATION_INFO": duration_info,
         "TEXT": text,

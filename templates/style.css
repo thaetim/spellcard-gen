@@ -59,7 +59,7 @@ body {
 }
 
 .card-text {
-    margin-top: 3pt;
+    /* margin-top: 3pt; */
     line-height: 1.2;
     font-size: 7pt;
     /* Default size */
@@ -69,6 +69,7 @@ body {
     /* Let it grow naturally */
     max-height: 100%;
     /* But constrain to available space */
+    /* text-align: justify; */
 }
 
 .card-attr-info {
@@ -82,7 +83,7 @@ body {
     font-size: 7pt;
     font-style: italic;
     padding: 1pt 3pt;
-    margin: 1pt 0 3pt 0;
+    margin: 0 0 3pt 0;
     border-radius: 2pt;
 }
 
@@ -130,6 +131,27 @@ body {
     margin: 0;
     pointer-events: none;
     /* prevent accidental selection overlap */
+}
+
+/* Ritual and Concentration special styling */
+.card-attrs td.concentration em {
+    background: var(--header-color, #304A90);
+    background-image: var(--header-bg, none);
+    background-blend-mode: multiply;
+    color: white;
+    padding: 1pt 0.1pt;
+    transform: translateY(1pt);
+    border-radius: 1pt;
+}
+
+.card-attrs td.ritual em {
+    background: var(--header-color, #304A90);
+    background-image: var(--header-bg, none);
+    background-blend-mode: multiply;
+    color: white;
+    padding: 1pt 0.1pt;
+    transform: translateY(1pt);
+    border-radius: 1pt;
 }
 
 
