@@ -155,6 +155,7 @@ def generate_spell_card(spell, card_template):
     casting_time = casting_time.replace('Min','min')
     casting_time = casting_time.replace('Day','day')
     casting_time = casting_time.replace('Year','year')
+    casting_time = casting_time.replace('Hr.','hours')
 
     # name
     name = spell['Name']
@@ -163,7 +164,7 @@ def generate_spell_card(spell, card_template):
 
     mapping = {
         "CARD_ID": card_id,
-        "PRIMARY_CLASS": primary_class,
+        "PRIMARY_CLASS": '', # primary_class,
         "NAME": name,
         "CASTING": casting_time,
         "RANGE": spell_range,
@@ -172,14 +173,15 @@ def generate_spell_card(spell, card_template):
         "MATERIAL_COMPONENTS": materials,
         "DURATION_INFO": duration_info,
         "TEXT": text,
-        "SOURCE": source,
-        "SPELL_TYPE": spell_type
+        "SOURCE": '', # source,
+        "SPELL_TYPE": spell_type,
+        "SCHOOL": school
     }
 
     return replace_placeholders(card_template, mapping)
 
 def main():
-    csv_path = 'data/Spells.csv'
+    csv_path = 'data/Spells-various.csv'
     css_path = 'templates/style.css'
     page_path = 'templates/page.html'
     card_path = 'templates/card.html'
