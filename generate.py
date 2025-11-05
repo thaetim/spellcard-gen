@@ -1,4 +1,5 @@
 import csv, re, os
+from collections import defaultdict
 
 SYMBOL_CONCENTRATION = '<span class="diamond"><span class="c">C</span></span>'
 
@@ -27,6 +28,81 @@ def replace_placeholders(template, mapping):
     for key, value in mapping.items():
         template = template.replace(f'<!--{{{{{key}}}}}-->', value)
     return template
+
+def merge_spell_duplicates(spell_rows):
+    """
+    Merge duplicate spells by name. Combines metadata from multiple sources.
+    Returns a list of merged spell dictionaries.
+    """
+    spells_by_name = defaultdict(list)
+    
+    # Group spells by name
+    for spell in spell_rows:
+        spells_by_name[spell['Name']].append(spell)
+    
+    merged_spells = []
+    
+    for spell_name, occurrences in spells_by_name.items():
+        if len(occurrences) == 1:
+            # No duplicates, use as-is
+            merged_spells.append(occurrences[0])
+            continue
+        
+        # Multiple occurrences - merge them
+        primary = occurrences[0].copy()
+        
+        # Collect all sources
+        sources = [occ.get('Source', '') for occ in occurrences if occ.get('Source')]
+        # Remove duplicates and core sources
+        CORE_SOURCES = {'PHB', 'SRD', 'DMG'}
+        unique_sources = []
+        for src in sources:
+            if src not in unique_sources and src not in CORE_SOURCES:
+                unique_sources.append(src)
+        primary['Source'] = ', '.join(unique_sources) if unique_sources else sources[0]
+        
+        # Merge additive fields (classes, subclasses, etc.)
+        def merge_list_field(field_name):
+            all_items = []
+            for occ in occurrences:
+                field_val = occ.get(field_name, '')
+                if field_val:
+                    # Split by comma and clean
+                    items = [item.strip() for item in field_val.split(',')]
+                    all_items.extend(items)
+            # Deduplicate while preserving order
+            seen = set()
+            unique = []
+            for item in all_items:
+                if item and item not in seen:
+                    seen.add(item)
+                    unique.append(item)
+            return ', '.join(unique)
+        
+        primary['Classes'] = merge_list_field('Classes')
+        primary['Optional/Variant Classes'] = merge_list_field('Optional/Variant Classes')
+        primary['Subclasses'] = merge_list_field('Subclasses')
+        
+        # For text content, use the longest/most detailed version
+        best_text = primary.get('Text', '')
+        best_hl = primary.get('At Higher Levels', '')
+        
+        for occ in occurrences:
+            occ_text = occ.get('Text', '')
+            occ_hl = occ.get('At Higher Levels', '')
+            
+            # Prefer longer text (more detailed)
+            if len(occ_text) > len(best_text):
+                best_text = occ_text
+            if len(occ_hl) > len(best_hl):
+                best_hl = occ_hl
+        
+        primary['Text'] = best_text
+        primary['At Higher Levels'] = best_hl
+        
+        merged_spells.append(primary)
+    
+    return merged_spells
 
 def generate_spell_card(spell, card_template):
     card_id = generate_card_id(spell['Name'])
@@ -116,11 +192,19 @@ def main():
     card_template = load_file(card_path)
     js_content = load_file(js_path)
 
-    cards = []
+    # Read and merge spell data
+    spell_rows = []
     with open(csv_path, encoding='utf-8') as f:
         for row in csv.DictReader(f):
             cleaned = {k: v.strip() if v else "" for k, v in row.items()}
-            cards.append(generate_spell_card(cleaned, card_template))
+            spell_rows.append(cleaned)
+    
+    # Merge duplicates
+    merged_spells = merge_spell_duplicates(spell_rows)
+    print(f"Merged {len(spell_rows)} spell entries into {len(merged_spells)} unique spells")
+    
+    # Generate cards
+    cards = [generate_spell_card(spell, card_template) for spell in merged_spells]
 
     html_output = (page_template
         .replace('/*{{STYLES}}*/', css)
