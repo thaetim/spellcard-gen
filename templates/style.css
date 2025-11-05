@@ -80,7 +80,7 @@ body {
     background-image: var(--footer-bg, none);
     background-blend-mode: multiply;
     color: white;
-    font-size: 7pt;
+    font-size: 5pt;
     font-style: italic;
     padding: 1pt 3pt;
     margin: 0 0 3pt 0;
@@ -131,29 +131,29 @@ body {
     margin: 0;
     pointer-events: none;
     /* prevent accidental selection overlap */
+    display: inline-block;
 }
 
 /* Ritual and Concentration special styling */
-.card-attrs td.concentration em {
+.card-attrs td.concentration em,
+.card-attrs td.ritual em,
+.card-attrs td.range-special em {
     background: var(--header-color, #304A90);
     background-image: var(--header-bg, none);
     background-blend-mode: multiply;
     color: white;
-    padding: 1pt 0.1pt;
+    padding: 1pt 3pt;
     transform: translateY(1pt);
     border-radius: 1pt;
+    width: auto !important; /* Override the 100% width */
+    left: 50% !important; /* Center horizontally */
+    transform: translateX(-50%) translateY(1pt) !important; /* Adjust transform for centering */
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
-.card-attrs td.ritual em {
-    background: var(--header-color, #304A90);
-    background-image: var(--header-bg, none);
-    background-blend-mode: multiply;
-    color: white;
-    padding: 1pt 0.1pt;
-    transform: translateY(1pt);
-    border-radius: 1pt;
+.card-attrs td.range-special em {
+    padding: 1pt 2pt; /* Adjust this value for tighter horizontal padding */
 }
-
 
 .card-attrs tr td:nth-child(odd) {
     width: 15%;
@@ -234,74 +234,82 @@ body {
 
 /* Abjuration - The School of Protection */
 .class-Abjuration {
-    --header-color: #2A4885; /* A deep, steadfast blue */
+    --base-color: #4d2f28;
+    --header-color: var(--base-color);
     --header-bg: url("textures/abjuration.png");
-    --footer-color: #2A4885;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/abjuration.png");
-    --card-border: #1A3264; /* A darker, more solid blue */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Conjuration - The School of Summoning */
 .class-Conjuration {
-    --header-color: #C45A1A; /* A vibrant, energetic orange */
+    --base-color: #003249;
+    --header-color: var(--base-color);
     --header-bg: url("textures/conjuration.png");
-    --footer-color: #C45A1A;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/conjuration.png");
-    --card-border: #9B4615; /* A richer, deeper orange */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Divination - The School of Fate */
 .class-Divination {
-    --header-color: #E8F4E8; /* A clean, luminous white */
+    --base-color: #37391e;
+    --header-color: var(--base-color);
     --header-bg: url("textures/divination.png");
-    --footer-color: #E8F4E8;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/divination.png");
-    --card-border: #2E8B57; /* The green trim (Seafoam Green) */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Enchantment - The School of Charm */
 .class-Enchantment {
-    --header-color: #D67CB9; /* A soft, beguiling pink */
+    --base-color: #142300;
+    --header-color: var(--base-color);
     --header-bg: url("textures/enchantment.png");
-    --footer-color: #D67CB9;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/enchantment.png");
-    --card-border: #B25995; /* A deeper, more hypnotic pink */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Evocation - The School of Power */
 .class-Evocation {
-    --header-color: #B22222; /* A brilliant, fiery red */
+    --base-color: #460008;
+    --header-color: var(--base-color);
     --header-bg: url("textures/evocation.png");
-    --footer-color: #B22222;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/evocation.png");
-    --card-border: #8B1A1A; /* A deeper, more intense red */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Illusion - The School of Trickery */
 .class-Illusion {
-    --header-color: #9370DB; /* A mysterious, royal purple */
+    --base-color: #3f002f;
+    --header-color: var(--base-color);
     --header-bg: url("textures/illusion.png");
-    --footer-color: #9370DB;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/illusion.png");
-    --card-border: #6A5ACD; /* A darker, more shadowy slate blue */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Necromancy - The School of Life and Death */
 .class-Necromancy {
-    --header-color: #708090; /* A neutral, balanced grey */
+    --base-color: #1c0b3a;
+    --header-color: var(--base-color);
     --header-bg: url("textures/necromancy.png");
-    --footer-color: #708090;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/necromancy.png");
-    --card-border: #2F4F4F; /* A dark, somber grey */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 /* Transmutation - The School of Change */
 .class-Transmutation {
-    --header-color: #228B22; /* A vibrant, natural green */
+    --base-color: #641f21;
+    --header-color: var(--base-color);
     --header-bg: url("textures/transmutation.png");
-    --footer-color: #228B22;
+    --footer-color: var(--base-color);
     --footer-bg: url("textures/transmutation.png");
-    --card-border: #006400; /* A deep forest green */
+    --card-border: color-mix(in srgb, var(--base-color) 80%, black);
 }
 
 .diamond {

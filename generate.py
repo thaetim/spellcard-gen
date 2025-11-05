@@ -137,18 +137,34 @@ def generate_spell_card(spell, card_template):
         IS_CONCENTRATION = True
         match = re.match(r'Concentration,?\s*(up to .*)', duration, re.IGNORECASE)
         if match:
-            # duration_info = "concentration" # 🌀⚪×🔆 
-            duration = match.group(1).strip() # + '&nbsp;' + SYMBOL_CONCENTRATION
+            duration = match.group(1).strip()
     duration = duration.replace('Instantaneous','Instant')
     duration = duration.replace('up to ','')
     duration = duration.replace('minutes','mins')
     duration = duration.replace('minute','min.')
     duration = duration.replace('year','yr')
 
-    # range
+    # range - extract parenthetical content if present
     spell_range = spell.get('Range', '')
-    spell_range = spell_range.replace('feet','ft.')
-    spell_range = spell_range.replace(' (','<br>(')
+    range_label = "Range"
+    range_class = ""
+    
+    # Check for parentheses like "Self (10-foot radius)"
+    paren_match = re.match(r'^(.+?)\s*\((.+?)\)$', spell_range)
+    if paren_match:
+        range_label = paren_match.group(1).strip()  # e.g., "Self"
+        range_detail = paren_match.group(2).strip()  # e.g., "10-foot radius"
+        # Extract just the area type (radius, cone, etc.) and convert X-foot to X ft.
+        area_match = re.match(r'([0-9]+)-foot (.+)', range_detail)
+        if area_match:
+            distance = area_match.group(1)
+            area_type = area_match.group(2)  # e.g., "radius", "cone"
+            spell_range = f"{distance} ft."
+            range_label = f"{range_label} {area_type.title()}"
+            range_class = "range-special"
+    # Handle standalone foot conversions (for cases without parentheses)
+    spell_range = re.sub(r'([0-9]+)-foot', r'\1 ft.', spell_range)
+    spell_range = spell_range.replace('feet', 'ft.')
 
     # casting time + ritual
     IS_RITUAL = False
@@ -163,8 +179,6 @@ def generate_spell_card(spell, card_template):
 
     # name
     name = spell['Name']
-    # if IS_CONCENTRATION:
-    #     name += '&nbsp;' + SYMBOL_CONCENTRATION
 
     # Labels for special attributes
     casting_label = "Ritual" if IS_RITUAL else "Casting Time"
@@ -178,6 +192,8 @@ def generate_spell_card(spell, card_template):
         "CASTING_CLASS": "ritual" if IS_RITUAL else "",
         "CASTING_LABEL": casting_label,
         "RANGE": spell_range,
+        "RANGE_CLASS": range_class,
+        "RANGE_LABEL": range_label,
         "COMPONENTS": components,
         "DURATION": duration,
         "DURATION_CLASS": "concentration" if IS_CONCENTRATION else "",
