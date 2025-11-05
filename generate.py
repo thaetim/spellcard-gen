@@ -107,11 +107,14 @@ def main():
     css_path = 'templates/style.css'
     page_path = 'templates/page.html'
     card_path = 'templates/card.html'
+    js_path = 'templates/autosize.js'
     out_path = 'out/spell_cards.html'
+    out_js_path = 'out/autosize.js'
 
     css = load_file(css_path)
     page_template = load_file(page_path)
     card_template = load_file(card_path)
+    js_content = load_file(js_path)
 
     cards = []
     with open(csv_path, encoding='utf-8') as f:
@@ -119,11 +122,19 @@ def main():
             cleaned = {k: v.strip() if v else "" for k, v in row.items()}
             cards.append(generate_spell_card(cleaned, card_template))
 
-    html_output = page_template.replace('/*{{STYLES}}*/', css).replace('<!--{{CARDS}}-->', ''.join(cards))
+    html_output = (page_template
+        .replace('/*{{STYLES}}*/', css)
+        .replace('<!--{{CARDS}}-->', ''.join(cards)))
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    
+    # Write HTML
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html_output)
+    
+    # Copy JS to output
+    with open(out_js_path, 'w', encoding='utf-8') as f:
+        f.write(js_content)
 
     print(f"Generated {len(cards)} cards → {out_path}")
 
