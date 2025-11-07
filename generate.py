@@ -3,12 +3,44 @@ from collections import defaultdict
 
 SYMBOL_CONCENTRATION = '<span class="diamond"><span class="c">C</span></span>'
 
-def clean_html_text(text):
-    if not text:
-        return ""
-    text = text.replace('\n', '<br>')
-    text = re.sub(r'<[^>]+>', '', text)
-    return text
+def fix_text(text):
+    if not text: 
+        return text
+    
+    # Additional cosmetics
+    text = re.sub(r'\.([A-Z])', r'. \1', text)
+
+    if ':' not in text:
+        return text
+
+    # Split the text into two parts at the first ':' followed immediately with a letter
+    content = re.match(r'^(.*?):([A-Z].*)', text)
+    if not content:
+        return text
+
+    before_colon, after_colon = content.group(1), content.group(2)
+
+    # Split at capital letters not preceded by another capital letter or whitespace
+    pattern = r'(?<![A-Z\s])(?=[A-Z])'
+    matches = re.split(pattern, after_colon)
+    matches = list(filter(None, matches))
+
+    # Process matches
+    processed_matches = []
+    for i, content in enumerate(matches):
+
+        # Boldify the paratitle and append ';' (except the last match)
+        if i != len(matches) - 1:
+            # Boldify the match
+            paratitle, content = content.split(',',1)
+            content = '<b>' + paratitle + '</b>,' + content + '; '
+
+        processed_matches.append(content)
+
+    # Combine
+    result = before_colon + ': ' + ''.join(processed_matches)
+
+    return result
 
 def generate_card_id(name):
     return re.sub(r'[^a-zA-Z0-9]', '', name.lower())[:10]
@@ -110,8 +142,9 @@ def generate_spell_card(spell, card_template):
     school = spell.get('School', '').title()
     spell_type = f"{school} Cantrip" if lvl.lower() in ('cantrip', 0, '0') else f"{lvl}-level {school}"
 
-    text = clean_html_text(spell.get('Text', ''))
-    hl = clean_html_text(spell.get('At Higher Levels', ''))
+    text = fix_text(spell.get('Text', ''))
+    hl = fix_text(spell.get('At Higher Levels', ''))
+    hl = hl.replace('At Higher Levels. ','')
     if hl:
         text += f"<br><br><b>At Higher Levels:</b> {hl}"
     
