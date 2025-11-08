@@ -33,8 +33,8 @@ def fix_text(text):
         if i != len(matches) - 1:
             if ',' in content:
                 # Boldify the match
-                paratitle, content = content.split(',',1)
-                content = '<b>' + paratitle + '</b>,' + content
+                paratitle, rest = content.split(',', 1)
+                content = '<b>' + paratitle + '</b>,' + rest
             content += '; '
 
         processed_matches.append(content)
@@ -138,7 +138,86 @@ def merge_spell_duplicates(spell_rows):
     
     return merged_spells
 
-def generate_spell_card(spell, card_template):
+def estimate_text_length(text):
+    """Rough estimate of how much space text will take."""
+    # Remove HTML tags for counting
+    clean_text = re.sub(r'<[^>]+>', '', text)
+    return len(clean_text)
+
+def split_spell_text(text, target_length=800):
+    """
+    Split long spell text into two parts at a reasonable break point.
+    Aims for 45%/55% split, preferring sentence endings (. or ;) over other whitespace.
+    Returns (part1, part2) or (text, None) if no split needed.
+    """
+    if estimate_text_length(text) < target_length:
+        return text, None
+    
+    # Remove HTML tags to work with clean text
+    clean_text = re.sub(r'<[^>]+>', '', text)
+    total_length = len(clean_text)
+    target_pos = int(total_length * 0.45)
+    
+    # Find all potential break points with priorities
+    sentence_ends = []  # Priority: sentence endings (. or ;)
+    whitespaces = []     # Fallback: any whitespace
+    
+    # Find sentence endings
+    for match in re.finditer(r'[.;]\s+', text):
+        # Map position from original text (with HTML) to clean text position
+        html_pos = match.end()
+        clean_pos = len(re.sub(r'<[^>]+>', '', text[:html_pos]))
+        sentence_ends.append((html_pos, clean_pos))
+    
+    # Find all whitespace positions
+    for match in re.finditer(r'\s+', text):
+        html_pos = match.end()
+        clean_pos = len(re.sub(r'<[^>]+>', '', text[:html_pos]))
+        whitespaces.append((html_pos, clean_pos))
+    
+    # First try to find best sentence ending near 45%
+    best_break = None
+    best_distance = float('inf')
+    
+    for html_pos, clean_pos in sentence_ends:
+        distance = abs(clean_pos - target_pos)
+        if distance < best_distance:
+            best_distance = distance
+            best_break = html_pos
+    
+    # If no sentence ending found within reasonable range, use any whitespace
+    if best_break is None or best_distance > total_length * 0.2:  # If >20% away from target
+        best_distance = float('inf')
+        for html_pos, clean_pos in whitespaces:
+            distance = abs(clean_pos - target_pos)
+            if distance < best_distance:
+                best_distance = distance
+                best_break = html_pos
+    
+    # If still no break found, just split at target
+    if best_break is None:
+        # Map target position back to HTML
+        char_count = 0
+        html_pos = 0
+        in_tag = False
+        
+        while html_pos < len(text) and char_count < target_pos:
+            if text[html_pos] == '<':
+                in_tag = True
+            elif text[html_pos] == '>':
+                in_tag = False
+            elif not in_tag:
+                char_count += 1
+            html_pos += 1
+        
+        best_break = html_pos
+    
+    part1 = text[:best_break].strip()
+    part2 = text[best_break:].strip()
+    
+    return part1, part2 if part2 else None
+
+def generate_spell_card(spell, card_template, continuation_template=None):
     card_id = generate_card_id(spell['Name'])
     lvl = spell.get('Level', '')
     school_raw = spell.get('School', '')
@@ -285,6 +364,9 @@ def generate_spell_card(spell, card_template):
     casting_label = "Ritual" if IS_RITUAL else "Casting Time"
     duration_label = "Concentration" if IS_CONCENTRATION else "Duration"
 
+    # Check if spell text needs to be split
+    text_part1, text_part2 = split_spell_text(text)
+
     mapping = {
         "CARD_ID": card_id,
         "PRIMARY_CLASS": '', # primary_class,
@@ -301,19 +383,35 @@ def generate_spell_card(spell, card_template):
         "DURATION_LABEL": duration_label,
         "MATERIAL_COMPONENTS": materials,
         "DURATION_INFO": duration_info,
-        "TEXT": text,
+        "TEXT": text_part1,
         "SOURCE": source,
         "SPELL_TYPE": spell_type,
         "SCHOOL": school
     }
 
-    return replace_placeholders(card_template, mapping)
+    cards = [replace_placeholders(card_template, mapping)]
+    
+    # Generate continuation card if needed
+    if text_part2 and continuation_template:
+        continuation_mapping = {
+            "CARD_ID": card_id,
+            "NAME": name,
+            "TEXT": text_part2,
+            "PRIMARY_CLASS": '',
+            "SOURCE": source,
+            "SPELL_TYPE": spell_type,
+            "SCHOOL": school
+        }
+        cards.append(replace_placeholders(continuation_template, continuation_mapping))
+    
+    return ''.join(cards)
 
 def main():
     csv_path = 'data/Spells-various.csv'
     css_path = 'templates/style.css'
     page_path = 'templates/page.html'
     card_path = 'templates/card.html'
+    card_continuation_path = 'templates/card-continuation.html'
     js_path = 'templates/autosize.js'
     out_path = 'out/spell_cards.html'
     out_js_path = 'out/autosize.js'
@@ -321,6 +419,7 @@ def main():
     css = load_file(css_path)
     page_template = load_file(page_path)
     card_template = load_file(card_path)
+    continuation_template = load_file(card_continuation_path)
     js_content = load_file(js_path)
 
     # Read and merge spell data
@@ -335,7 +434,7 @@ def main():
     print(f"Merged {len(spell_rows)} spell entries into {len(merged_spells)} unique spells")
     
     # Generate cards
-    cards = [generate_spell_card(spell, card_template) for spell in merged_spells]
+    cards = [generate_spell_card(spell, card_template, continuation_template) for spell in merged_spells]
 
     html_output = (page_template
         .replace('/*{{STYLES}}*/', css)
@@ -355,7 +454,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# TODO: long spells split into two cards if font size would have to drop below 6pt (second card w/o card-attrs and card-attr-info)
-# TODO: on autosizing, break the title at '\nof' (if exists) - then try and, or, at, etc

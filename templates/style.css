@@ -313,6 +313,15 @@ body {
     color: black;
 }
 
+/* Continuation cards - more space for text */
+.card-continuation .card-body {
+    padding-top: 5pt;
+}
+
+.card-continuation .card-text {
+    font-size: 7pt;
+}
+
 .card-class {
     opacity: 0.4;
     color: white;
