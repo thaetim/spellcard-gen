@@ -31,9 +31,11 @@ def fix_text(text):
 
         # Boldify the paratitle and append ';' (except the last match)
         if i != len(matches) - 1:
-            # Boldify the match
-            paratitle, content = content.split(',',1)
-            content = '<b>' + paratitle + '</b>,' + content + '; '
+            if ',' in content:
+                # Boldify the match
+                paratitle, content = content.split(',',1)
+                content = '<b>' + paratitle + '</b>,' + content
+            content += '; '
 
         processed_matches.append(content)
 
@@ -139,14 +141,23 @@ def merge_spell_duplicates(spell_rows):
 def generate_spell_card(spell, card_template):
     card_id = generate_card_id(spell['Name'])
     lvl = spell.get('Level', '')
-    school = spell.get('School', '').title()
-    spell_type = f"{school} Cantrip" if lvl.lower() in ('cantrip', 0, '0') else f"{lvl}-level {school}"
+    school_raw = spell.get('School', '')
+    
+    # Extract ritual from school (e.g., "Abjuration (ritual)")
+    IS_RITUAL = '(ritual)' in school_raw.lower()
+    school = school_raw.replace('(ritual)', '').replace('(Ritual)', '').strip().title()
+    
+    # Build spell type string with colored school name
+    if lvl.lower() in ('cantrip', 0, '0'):
+        spell_type = f'<span class="school-name">{school}</span> Cantrip'
+    else:
+        spell_type = f'{lvl}-level <span class="school-name">{school}</span>'
 
     text = fix_text(spell.get('Text', ''))
     hl = fix_text(spell.get('At Higher Levels', ''))
-    hl = hl.replace('At Higher Levels. ','')
     if hl:
-        text += f"<br><br><b>At Higher Levels:</b> {hl}"
+        hl = hl.replace('At Higher Levels.','<b>At Higher Levels.</b>')
+        text += "<br><br>" + hl
     
     # primary class
     primary_class = parse_classes(spell.get('Classes', '')).title()
@@ -154,7 +165,7 @@ def generate_spell_card(spell, card_template):
     # source
     source = spell.get('Source', '')
     CORE_SOURCES = ['PHB', 'SRD', 'DMG']
-    source = '' if source in CORE_SOURCES else f"[{source}]"
+    # source = '' if source in CORE_SOURCES else source
 
     # components + materials
     components_raw = spell.get('Components', '')
@@ -171,40 +182,97 @@ def generate_spell_card(spell, card_template):
         match = re.match(r'Concentration,?\s*(up to .*)', duration, re.IGNORECASE)
         if match:
             duration = match.group(1).strip()
-    duration = duration.replace('Instantaneous','Instant')
-    duration = duration.replace('up to ','')
-    duration = duration.replace('minutes','mins')
-    duration = duration.replace('minute','min.')
-    duration = duration.replace('year','yr')
+    for k, v in {
+        'Instantaneous': 'Instant',
+        'up to ': '',
+        'minutes': 'min.',
+        'minute': 'min.',
+        'hours': 'h',
+        'hour': 'h',
+        'year': 'yr',
+        'Until dispelled': 'Permanent',
+        '(see below)': '',
+        'Instant or': 'Instant /',
+        'Concentration': 'Indefinite',
+    }.items():
+        duration = duration.replace(k,v)
 
     # range - extract parenthetical content if present
     spell_range = spell.get('Range', '')
     range_label = "Range"
     range_class = ""
-    
-    # Check for parentheses like "Self (10-foot radius)"
-    paren_match = re.match(r'^(.+?)\s*\((.+?)\)$', spell_range)
-    if paren_match:
-        range_label = paren_match.group(1).strip()  # e.g., "Self"
-        range_detail = paren_match.group(2).strip()  # e.g., "10-foot radius"
-        # Extract just the area type (radius, cone, etc.) and convert X-foot to X ft.
-        area_match = re.match(r'([0-9]+)-foot (.+)', range_detail)
-        if area_match:
-            distance = area_match.group(1)
-            area_type = area_match.group(2)  # e.g., "radius", "cone"
-            spell_range = f"{distance} ft."
-            range_label = f"{range_label} {area_type.title()}"
-            range_class = "range-special"
-    # Handle standalone foot conversions (for cases without parentheses)
-    spell_range = re.sub(r'([0-9]+)-foot', r'\1 ft.', spell_range)
-    spell_range = spell_range.replace('feet', 'ft.')
 
-    # casting time + ritual
-    IS_RITUAL = False
+    # Extended unit mappings
+    UNIT_MAP = {
+        'foot': 'ft.', 'feet': 'ft.', 
+        'mile': 'mi.', 'miles': 'mi.',
+        'yard': 'yd.', 'yards': 'yd.',
+        'meter': 'm', 'meters': 'm',
+        'kilometer': 'km', 'kilometers': 'km'
+    }
+
+    # Special cases for self/other with areas
+    special_cases = [
+        (r'^Self\s*\((.+)\)$', 'Self'),  # Self (30-foot radius)
+        (r'^Touch\s*\((.+)\)$', 'Touch'), # Touch (5-foot radius)
+    ]
+
+    # Check for special cases first
+    for pattern, base_label in special_cases:
+        special_match = re.match(pattern, spell_range)
+        if special_match:
+            range_label = base_label
+            area_detail = special_match.group(1)
+            
+            # Extract area information
+            area_match = re.search(r'(\d+)\s*-?\s*(\w+)(?:\s+(\w+))?', area_detail)
+            if area_match:
+                distance = area_match.group(1)
+                unit = area_match.group(2).lower()
+                area_type = area_match.group(3) or "radius"  # default to radius
+                
+                if unit in UNIT_MAP:
+                    spell_range = f"{distance} {UNIT_MAP[unit]}"
+                else:
+                    spell_range = f"{distance} {unit}"
+                
+                range_label = f"{range_label} {area_type.title()}"
+                range_class = "range-special"
+            break
+    else:
+        # Regular parentheses case
+        paren_match = re.match(r'^(.+?)\s*\((.+?)\)$', spell_range)
+        if paren_match:
+            range_label = paren_match.group(1).strip()
+            range_detail = paren_match.group(2).strip()
+            
+            area_match = re.match(r'(\d+)\s*-?\s*(\w+)(?:\s+(.+))?', range_detail)
+            if area_match:
+                distance = area_match.group(1)
+                unit = area_match.group(2).lower()
+                area_type = area_match.group(3) or ""
+                
+                if unit in UNIT_MAP:
+                    spell_range = f"{distance} {UNIT_MAP[unit]}"
+                
+                if area_type:
+                    range_label = f"{range_label} {area_type.title()}"
+                    range_class = "range-special"
+
+    # Convert all units in the final string
+    for old_unit, new_unit in UNIT_MAP.items():
+        patterns = [
+            rf'(\d+)-{old_unit}\b',
+            rf'(\d+)\s+{old_unit}\b'
+        ]
+        for pattern in patterns:
+            spell_range = re.sub(pattern, rf'\1 {new_unit}', spell_range)
+
+    # Final cleanup
+    spell_range = re.sub(r'\s+', ' ', spell_range).strip()
+
+    # casting time
     casting_time = spell.get('Casting Time', '')
-    ritual_field = spell.get('Ritual', '').lower()
-    if ritual_field in ('yes', 'true', '1'):
-        IS_RITUAL = True
     casting_time = casting_time.replace('Min','min')
     casting_time = casting_time.replace('Day','day')
     casting_time = casting_time.replace('Year','year')
@@ -234,7 +302,7 @@ def generate_spell_card(spell, card_template):
         "MATERIAL_COMPONENTS": materials,
         "DURATION_INFO": duration_info,
         "TEXT": text,
-        "SOURCE": '', # source,
+        "SOURCE": source,
         "SPELL_TYPE": spell_type,
         "SCHOOL": school
     }
@@ -287,3 +355,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# TODO: long spells split into two cards if font size would have to drop below 6pt (second card w/o card-attrs and card-attr-info)
+# TODO: on autosizing, break the title at '\nof' (if exists) - then try and, or, at, etc
