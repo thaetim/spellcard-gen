@@ -1,48 +1,46 @@
-import csv, re, os
+import os, re, random
+from pathlib import Path
 from collections import defaultdict
+import pandas as pd
 
-SYMBOL_CONCENTRATION = '<span class="diamond"><span class="c">C</span></span>'
+# Constants
+N_SAMPLE_THRESH = 200
+N_SAMPLE = 69
+N_SAMPLE_PHRASES = [
+    # 'Aura of Desecration',
+    # 'advantage',
+    # 'disadvantage'
+]
+
+# Precompile commonly used regex patterns for performance
+RE_HTML_TAGS = re.compile(r'<[^>]+>')
+RE_CAPITAL_SPLIT = re.compile(r'(?<![A-Z\s])(?=[A-Z])')
+RE_SENTENCE_END = re.compile(r'[.;]\s+')
+RE_WHITESPACE = re.compile(r'\s+')
 
 def fix_text(text):
     if not text: 
         return text
-    
-    # Additional cosmetics
-    text = re.sub(r'\.([A-Z])', r'. \1', text)
 
+    text = re.sub(r'\.([A-Z])', r'. \1', text)
     if ':' not in text:
         return text
 
-    # Split the text into two parts at the first ':' followed immediately with a letter
-    content = re.match(r'^(.*?):([A-Z].*)', text)
-    if not content:
+    m = re.match(r'^(.*?):([A-Z].*)', text)
+    if not m:
         return text
+    before_colon, after_colon = m.groups()
 
-    before_colon, after_colon = content.group(1), content.group(2)
-
-    # Split at capital letters not preceded by another capital letter or whitespace
-    pattern = r'(?<![A-Z\s])(?=[A-Z])'
-    matches = re.split(pattern, after_colon)
-    matches = list(filter(None, matches))
-
-    # Process matches
-    processed_matches = []
-    for i, content in enumerate(matches):
-
-        # Boldify the paratitle and append ';' (except the last match)
+    matches = list(filter(None, RE_CAPITAL_SPLIT.split(after_colon)))
+    processed = []
+    for i, segment in enumerate(matches):
         if i != len(matches) - 1:
-            if ',' in content:
-                # Boldify the match
-                paratitle, rest = content.split(',', 1)
-                content = '<b>' + paratitle + '</b>,' + rest
-            content += '; '
-
-        processed_matches.append(content)
-
-    # Combine
-    result = before_colon + ': ' + ''.join(processed_matches)
-
-    return result
+            if ',' in segment:
+                head, rest = segment.split(',', 1)
+                segment = f'<b>{head}</b>,{rest}'
+            segment += '; '
+        processed.append(segment)
+    return before_colon + ': ' + ''.join(processed)
 
 def generate_card_id(name):
     return re.sub(r'[^a-zA-Z0-9]', '', name.lower())[:10]
@@ -51,197 +49,136 @@ def parse_classes(classes_str):
     if not classes_str:
         return ""
     first = classes_str.split(',')[0].strip()
-    first = re.sub(r'\([^)]*\)', '', first).strip()
-    return first.lower()
+    return re.sub(r'\([^)]*\)', '', first).strip().lower()
 
 def load_file(path):
-    with open(path, encoding='utf-8') as f:
-        return f.read()
+    return Path(path).read_text(encoding='utf-8')
 
 def replace_placeholders(template, mapping):
-    for key, value in mapping.items():
-        template = template.replace(f'<!--{{{{{key}}}}}-->', value)
+    for k, v in mapping.items():
+        template = template.replace(f'<!--{{{{{k}}}}}-->', v)
     return template
 
-def merge_spell_duplicates(spell_rows):
-    """
-    Merge duplicate spells by name. Combines metadata from multiple sources.
-    Returns a list of merged spell dictionaries.
-    """
-    spells_by_name = defaultdict(list)
-    
-    # Group spells by name
-    for spell in spell_rows:
-        spells_by_name[spell['Name']].append(spell)
-    
-    merged_spells = []
-    
-    for spell_name, occurrences in spells_by_name.items():
-        if len(occurrences) == 1:
-            # No duplicates, use as-is
-            merged_spells.append(occurrences[0])
-            continue
-        
-        # Multiple occurrences - merge them
-        primary = occurrences[0].copy()
-        
-        # Collect all sources
-        sources = [occ.get('Source', '') for occ in occurrences if occ.get('Source')]
-        # Remove duplicates and core sources
-        CORE_SOURCES = {'PHB', 'SRD', 'DMG'}
-        unique_sources = []
-        for src in sources:
-            if src not in unique_sources and src not in CORE_SOURCES:
-                unique_sources.append(src)
-        primary['Source'] = ', '.join(unique_sources) if unique_sources else sources[0]
-        
-        # Merge additive fields (classes, subclasses, etc.)
-        def merge_list_field(field_name):
-            all_items = []
-            for occ in occurrences:
-                field_val = occ.get(field_name, '')
-                if field_val:
-                    # Split by comma and clean
-                    items = [item.strip() for item in field_val.split(',')]
-                    all_items.extend(items)
-            # Deduplicate while preserving order
-            seen = set()
-            unique = []
-            for item in all_items:
-                if item and item not in seen:
-                    seen.add(item)
-                    unique.append(item)
-            return ', '.join(unique)
-        
-        primary['Classes'] = merge_list_field('Classes')
-        primary['Optional/Variant Classes'] = merge_list_field('Optional/Variant Classes')
-        primary['Subclasses'] = merge_list_field('Subclasses')
-        
-        # For text content, use the longest/most detailed version
-        best_text = primary.get('Text', '')
-        best_hl = primary.get('At Higher Levels', '')
-        
-        for occ in occurrences:
-            occ_text = occ.get('Text', '')
-            occ_hl = occ.get('At Higher Levels', '')
-            
-            # Prefer longer text (more detailed)
-            if len(occ_text) > len(best_text):
-                best_text = occ_text
-            if len(occ_hl) > len(best_hl):
-                best_hl = occ_hl
-        
-        primary['Text'] = best_text
-        primary['At Higher Levels'] = best_hl
-        
-        merged_spells.append(primary)
-    
-    return merged_spells
+def merge_spell_duplicates(spells_df):
+    """Efficiently merge duplicate spells using pandas operations."""
+    # Define helper to merge string fields safely
+    def merge_texts(series):
+        longest = max(series, key=lambda s: len(s or ""), default="")
+        return longest.strip()
+
+    def merge_sources(series):
+        core = {'PHB', 'SRD', 'DMG'}
+        parts = [s for s in series.dropna() if s and s not in core]
+        seen, uniq = set(), []
+        for s in parts:
+            if s not in seen:
+                seen.add(s)
+                uniq.append(s)
+        return ', '.join(uniq) if uniq else (series.dropna().iloc[0] if not series.empty else "")
+
+    def merge_lists(series):
+        all_items = []
+        for v in series.dropna():
+            all_items.extend([x.strip() for x in v.split(',') if x.strip()])
+        seen, uniq = set(), []
+        for x in all_items:
+            if x not in seen:
+                seen.add(x)
+                uniq.append(x)
+        return ', '.join(uniq)
+
+    merged = (
+        spells_df.groupby("Name", dropna=False)
+        .agg({
+            "Source": merge_sources,
+            "Classes": merge_lists,
+            "Optional/Variant Classes": merge_lists,
+            "Subclasses": merge_lists,
+            "Text": merge_texts,
+            "At Higher Levels": merge_texts,
+            **{col: "first" for col in spells_df.columns if col not in {
+                "Name", "Source", "Classes", "Optional/Variant Classes", "Subclasses", "Text", "At Higher Levels"
+            }}
+        })
+        .reset_index()
+    )
+    return merged.to_dict(orient="records")
 
 def estimate_text_length(text):
-    """Rough estimate of how much space text will take."""
-    # Remove HTML tags for counting
-    clean_text = re.sub(r'<[^>]+>', '', text)
-    return len(clean_text)
+    return len(RE_HTML_TAGS.sub('', text or ''))
 
 def split_spell_text(text, target_length=800):
-    """
-    Split long spell text into two parts at a reasonable break point.
-    Split ratio accounts for card-attrs + card-attr-info taking up space on first card.
-    Estimates ~35% for first card (with attributes), ~65% for continuation card.
-    Prefers sentence endings (. or ;) over other whitespace.
-    Returns (part1, part2) or (text, None) if no split needed.
-    """
     if estimate_text_length(text) < target_length:
         return text, None
-    
-    # Remove HTML tags to work with clean text
-    clean_text = re.sub(r'<[^>]+>', '', text)
-    total_length = len(clean_text)
-    
-    # Adjust split ratio: first card has less space due to card-attrs + card-attr-info
-    # Card height: ~82mm, attrs+info take ~15mm, so text area is ~40% smaller on first card
-    # Therefore aim for 35/65 split instead of 50/50
-    target_pos = int(total_length * 0.35)
-    
-    # Find all potential break points with priorities
-    sentence_ends = []  # Priority: sentence endings (. or ;)
-    whitespaces = []     # Fallback: any whitespace
-    
-    # Find sentence endings
-    for match in re.finditer(r'[.;]\s+', text):
-        # Map position from original text (with HTML) to clean text position
-        html_pos = match.end()
-        clean_pos = len(re.sub(r'<[^>]+>', '', text[:html_pos]))
-        sentence_ends.append((html_pos, clean_pos))
-    
-    # Find all whitespace positions
-    for match in re.finditer(r'\s+', text):
-        html_pos = match.end()
-        clean_pos = len(re.sub(r'<[^>]+>', '', text[:html_pos]))
-        whitespaces.append((html_pos, clean_pos))
-    
-    # First try to find best sentence ending near 35%
-    best_break = None
-    best_distance = float('inf')
-    
-    for html_pos, clean_pos in sentence_ends:
-        distance = abs(clean_pos - target_pos)
-        if distance < best_distance:
-            best_distance = distance
-            best_break = html_pos
-    
-    # If no sentence ending found within reasonable range, use any whitespace
-    if best_break is None or best_distance > total_length * 0.2:  # If >20% away from target
-        best_distance = float('inf')
-        for html_pos, clean_pos in whitespaces:
-            distance = abs(clean_pos - target_pos)
-            if distance < best_distance:
-                best_distance = distance
-                best_break = html_pos
-    
-    # If still no break found, just split at target
-    if best_break is None:
-        # Map target position back to HTML
-        char_count = 0
-        html_pos = 0
-        in_tag = False
-        
-        while html_pos < len(text) and char_count < target_pos:
-            if text[html_pos] == '<':
-                in_tag = True
-            elif text[html_pos] == '>':
-                in_tag = False
-            elif not in_tag:
-                char_count += 1
-            html_pos += 1
-        
-        best_break = html_pos
-    
-    part1 = text[:best_break].strip()
-    part2 = text[best_break:].strip()
-    
-    return part1, part2 if part2 else None
+
+    clean_text = RE_HTML_TAGS.sub('', text)
+    total_len = len(clean_text)
+    target_pos = int(total_len * 0.35)
+
+    def best_break(text, regex):
+        best, dist = None, float('inf')
+        for match in regex.finditer(text):
+            html_pos = match.end()
+            clean_pos = len(RE_HTML_TAGS.sub('', text[:html_pos]))
+            d = abs(clean_pos - target_pos)
+            if d < dist:
+                dist, best = d, html_pos
+        return best, dist
+
+    html_break, dist = best_break(text, RE_SENTENCE_END)
+    if html_break is None or dist > total_len * 0.2:
+        html_break, _ = best_break(text, RE_WHITESPACE)
+
+    if not html_break:
+        html_break = min(len(text), target_pos)
+
+    return text[:html_break].strip(), text[html_break:].strip() or None
 
 def blend_with_black(hex_color, blend_percent=50):
-    """Blend a color with black by the given percentage."""
-    if not hex_color or hex_color.upper() == '#000000':
+    if not hex_color or hex_color.lower() == '#000000':
         return hex_color
+    r, g, b = [int(hex_color[i:i+2], 16) for i in (1, 3, 5)]
+    factor = 1 - blend_percent / 100
+    return f'#{int(r*factor):02x}{int(g*factor):02x}{int(b*factor):02x}'
+
+def load_spells(csv_path):
+    df = pd.read_csv(csv_path, encoding='utf-8').fillna("")
+    
+    # Ensure we include rows containing any of the sample phrases
+    if len(df) > N_SAMPLE_THRESH:
+        # Find rows that contain any of the sample phrases
+        phrase_mask = pd.Series(False, index=df.index)
+        for phrase in N_SAMPLE_PHRASES:
+            # Check all text columns for the phrase
+            text_columns = ['Text', 'At Higher Levels', 'Name', 'Description']
+            for col in text_columns:
+                if col in df.columns:
+                    phrase_mask = phrase_mask | df[col].str.contains(phrase, case=False, na=False)
         
-    # Convert hex to RGB
-    hex_color = hex_color.lstrip('#')
-    r = int(hex_color[0:2], 16)
-    g = int(hex_color[2:4], 16)
-    b = int(hex_color[4:6], 16)
+        # Get the phrase-matching rows
+        phrase_rows = df[phrase_mask]
+        
+        # Calculate how many more rows we need for the sample
+        remaining_sample = max(0, N_SAMPLE - len(phrase_rows))
+        
+        # Get random sample from the remaining rows (excluding phrase rows)
+        if remaining_sample > 0:
+            remaining_df = df[~phrase_mask]
+            if len(remaining_df) > remaining_sample:
+                random_sample = remaining_df.sample(n=remaining_sample, random_state=random.randint(0, 9999))
+            else:
+                random_sample = remaining_df
+        else:
+            random_sample = pd.DataFrame()
+        
+        # Combine phrase rows with random sample
+        df = pd.concat([phrase_rows, random_sample], ignore_index=True)
+        
+        print(f"Loaded sample of {len(df)} spells from {csv_path} (including {len(phrase_rows)} with sample phrases)")
+    else:
+        print(f"Loaded all {len(df)} spells from {csv_path}")
     
-    # Blend with black (0,0,0)
-    blend_factor = blend_percent / 100.0
-    r = int(r * (1 - blend_factor))
-    g = int(g * (1 - blend_factor))
-    b = int(b * (1 - blend_factor))
-    
-    # Convert back to hex
-    return f'#{r:02x}{g:02x}{b:02x}'
+    return df
 
 def colorize_text(text):
     """Apply coloring to dice rolls and damage types in spell text."""
@@ -285,7 +222,7 @@ def colorize_text(text):
                 if damage_match:
                     dice_part = damage_match.group(1)
                     damage_part = damage_match.group(2)
-                    return f'<span style="color: {color}; font-family: monospace; font-weight: bold;">{dice_part}</span> <span style="color: {color}; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+                    return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{dice_part}</span> <span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_part}</span>'
         
         # If we get here, check for damage type alone
         for damage_type, color in DAMAGE_COLORS.items():
@@ -296,14 +233,14 @@ def colorize_text(text):
                 if missing_ws_match:
                     preceding_char = missing_ws_match.group(1)
                     damage_part = missing_ws_match.group(2)
-                    return f'{preceding_char}<span style="color: {color}; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+                    return f'{preceding_char}<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_part}</span>'
                 
                 # Regular damage type
                 damage_pattern = rf'(\b{re.escape(damage_type)}\s+damage\b)'
                 damage_match = re.search(damage_pattern, full_match, re.IGNORECASE)
                 if damage_match:
                     damage_part = damage_match.group(1)
-                    return f'<span style="color: {color}; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+                    return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_part}</span>'
         
         return full_match
     
@@ -331,20 +268,22 @@ def colorize_text(text):
         processed_text = re.sub(combined_pattern, process_match, processed_text, flags=re.IGNORECASE)
     
     # Second pass: color remaining standalone dice rolls
-    # Only color dice rolls that are not already inside span tags
     def color_standalone_dice(match):
         dice_text = match.group(0)
-        # Simple check: if the dice text contains span tags, it's already processed
-        if '<span' not in dice_text and '</span>' not in dice_text:
-            return f'<span style="color: #FF0000; font-family: monospace;">{dice_text}</span>'
-        return dice_text
-    
+        # Skip if dice are already within or immediately before a colored span
+        start = match.start()
+        window = processed_text[max(0, start - 50):start + 50]
+        if '<span' in window:
+            return dice_text
+        color = '#0000FF'
+        return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace;">{dice_text}</span>'
+
     processed_text = re.sub(
         r'\b\d+d\d+\+?\d*\b',
         color_standalone_dice,
         processed_text
     )
-    
+
     return processed_text
 
 def generate_spell_card(spell, card_template, continuation_template=None):
@@ -393,6 +332,9 @@ def generate_spell_card(spell, card_template, continuation_template=None):
         'temporary hitpoints': 'temp. HP',
         'hitpoints': 'HP',
         'hit points': 'HP',
+        # CR
+        'challenge ratings': 'CR',
+        'challenge rating': 'CR',
         # Ability Scores
         'Strength': 'STR',
         'Dexterity': 'DEX',
@@ -407,6 +349,11 @@ def generate_spell_card(spell, card_template, continuation_template=None):
         'hour': 'h',
         'minutes': 'min.',
         'minute': 'min.',
+        # d20 rolls
+        'with advantage': '⥣',
+        'with disadvantage': '⥥',
+        'advantage': 'adv.',
+        'disadvantage': 'disadv.',
     }
     for k, v in PHRASE_SHORTHANDS.items():
         text = text.replace(k, v)
@@ -522,6 +469,8 @@ def generate_spell_card(spell, card_template, continuation_template=None):
 
     # Final cleanup
     spell_range = re.sub(r'\s+', ' ', spell_range).strip()
+    # range_label = range_label.replace('Self Emanation', 'Emanation')
+    range_label = range_label.replace('Self ', '')
 
     # casting time
     casting_time = spell.get('Casting Time', '')
@@ -581,50 +530,34 @@ def generate_spell_card(spell, card_template, continuation_template=None):
     return ''.join(cards)
 
 def main():
-    csv_path = 'data/Spells.csv'
-    css_path = 'templates/style.css'
-    page_path = 'templates/page.html'
-    card_path = 'templates/card.html'
-    card_continuation_path = 'templates/card-continuation.html'
-    js_path = 'templates/autosize.js'
-    out_path = 'out/spell_cards.html'
-    out_js_path = 'out/autosize.js'
+    base = Path("templates")
+    paths = {
+        "csv": Path("data/Spells-many.csv"),
+        "css": base / "style.css",
+        "page": base / "page.html",
+        "card": base / "card.html",
+        "card_cont": base / "card-continuation.html",
+        "js": base / "autosize.js",
+        "out_html": Path("out/spell_cards.html"),
+        "out_js": Path("out/autosize.js")
+    }
 
-    css = load_file(css_path)
-    page_template = load_file(page_path)
-    card_template = load_file(card_path)
-    continuation_template = load_file(card_continuation_path)
-    js_content = load_file(js_path)
+    css, page, card, card_cont, js = [load_file(p) for p in (paths["css"], paths["page"], paths["card"], paths["card_cont"], paths["js"])]
 
-    # Read and merge spell data
-    spell_rows = []
-    with open(csv_path, encoding='utf-8') as f:
-        for row in csv.DictReader(f):
-            cleaned = {k: v.strip() if v else "" for k, v in row.items()}
-            spell_rows.append(cleaned)
-    
-    # Merge duplicates
-    merged_spells = merge_spell_duplicates(spell_rows)
-    print(f"Merged {len(spell_rows)} spell entries into {len(merged_spells)} unique spells")
-    
-    # Generate cards
-    cards = [generate_spell_card(spell, card_template, continuation_template) for spell in merged_spells]
+    spells_df = load_spells(paths["csv"])
+    merged_spells = merge_spell_duplicates(spells_df)
+    print(f"Merged {len(spells_df)} → {len(merged_spells)} unique spells")
 
-    html_output = (page_template
-        .replace('/*{{STYLES}}*/', css)
-        .replace('<!--{{CARDS}}-->', ''.join(cards)))
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor() as ex:
+        cards = list(ex.map(lambda s: generate_spell_card(s, card, card_cont), merged_spells))
 
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    
-    # Write HTML
-    with open(out_path, 'w', encoding='utf-8') as f:
-        f.write(html_output)
-    
-    # Copy JS to output
-    with open(out_js_path, 'w', encoding='utf-8') as f:
-        f.write(js_content)
+    html = page.replace('/*{{STYLES}}*/', css).replace('<!--{{CARDS}}-->', ''.join(cards))
+    Path("out").mkdir(exist_ok=True)
+    paths["out_html"].write_text(html, encoding='utf-8')
+    paths["out_js"].write_text(js, encoding='utf-8')
 
-    print(f"Generated {len(cards)} cards → {out_path}")
+    print(f"Exported {len(cards)} cards to {paths['out_html']}")
 
 if __name__ == "__main__":
     main()
