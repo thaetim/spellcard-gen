@@ -147,7 +147,9 @@ def estimate_text_length(text):
 def split_spell_text(text, target_length=800):
     """
     Split long spell text into two parts at a reasonable break point.
-    Aims for 45%/55% split, preferring sentence endings (. or ;) over other whitespace.
+    Split ratio accounts for card-attrs + card-attr-info taking up space on first card.
+    Estimates ~35% for first card (with attributes), ~65% for continuation card.
+    Prefers sentence endings (. or ;) over other whitespace.
     Returns (part1, part2) or (text, None) if no split needed.
     """
     if estimate_text_length(text) < target_length:
@@ -156,7 +158,11 @@ def split_spell_text(text, target_length=800):
     # Remove HTML tags to work with clean text
     clean_text = re.sub(r'<[^>]+>', '', text)
     total_length = len(clean_text)
-    target_pos = int(total_length * 0.45)
+    
+    # Adjust split ratio: first card has less space due to card-attrs + card-attr-info
+    # Card height: ~82mm, attrs+info take ~15mm, so text area is ~40% smaller on first card
+    # Therefore aim for 35/65 split instead of 50/50
+    target_pos = int(total_length * 0.35)
     
     # Find all potential break points with priorities
     sentence_ends = []  # Priority: sentence endings (. or ;)
@@ -175,7 +181,7 @@ def split_spell_text(text, target_length=800):
         clean_pos = len(re.sub(r'<[^>]+>', '', text[:html_pos]))
         whitespaces.append((html_pos, clean_pos))
     
-    # First try to find best sentence ending near 45%
+    # First try to find best sentence ending near 35%
     best_break = None
     best_distance = float('inf')
     
@@ -217,6 +223,130 @@ def split_spell_text(text, target_length=800):
     
     return part1, part2 if part2 else None
 
+def blend_with_black(hex_color, blend_percent=50):
+    """Blend a color with black by the given percentage."""
+    if not hex_color or hex_color.upper() == '#000000':
+        return hex_color
+        
+    # Convert hex to RGB
+    hex_color = hex_color.lstrip('#')
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    
+    # Blend with black (0,0,0)
+    blend_factor = blend_percent / 100.0
+    r = int(r * (1 - blend_factor))
+    g = int(g * (1 - blend_factor))
+    b = int(b * (1 - blend_factor))
+    
+    # Convert back to hex
+    return f'#{r:02x}{g:02x}{b:02x}'
+
+def colorize_text(text):
+    """Apply coloring to dice rolls and damage types in spell text."""
+    # Damage type colors based on survey data (before 50% black blending)
+    DAMAGE_COLORS_BASE = {
+        'acid': '#00FF00',        # green/lime
+        'bludgeoning': '#808080', # gray
+        'cold': '#00FFFF',        # cyan
+        'fire': '#FF0000',        # red
+        'force': '#800080',       # purple (most popular)
+        'lightning': '#FFFF00',   # yellow
+        'necrotic': '#000000',    # black
+        'piercing': '#808080',    # gray
+        'poison': '#800080',      # purple
+        'psychic': '#FFC0CB',     # pink
+        'radiant': '#FFFFFF',     # white
+        'slashing': '#808080',    # gray
+        'thunder': '#808080',     # gray (most popular)
+    }
+    # Create blended damage colors
+    DAMAGE_COLORS = {damage_type: blend_with_black(color, 50) 
+                    for damage_type, color in DAMAGE_COLORS_BASE.items()}
+
+    if not text:
+        return text
+    
+    # We'll process in a single pass using a replacement function
+    def replace_damage_and_dice(match):
+        full_match = match.group(0)
+        
+        # Check if this is already inside a span (avoid double-processing)
+        if '<span' in full_match and '</span>' in full_match:
+            return full_match
+            
+        # Try to identify what we're matching
+        if 'd' in full_match.lower() and any(dmg_type in full_match.lower() for dmg_type in DAMAGE_COLORS.keys()):
+            # This contains both dice and damage type
+            for damage_type, color in DAMAGE_COLORS.items():
+                pattern = rf'(\b\d+d\d+\+?\d*\b)\s+({re.escape(damage_type)}\s+damage\b)'
+                damage_match = re.search(pattern, full_match, re.IGNORECASE)
+                if damage_match:
+                    dice_part = damage_match.group(1)
+                    damage_part = damage_match.group(2)
+                    return f'<span style="color: {color}; font-family: monospace; font-weight: bold;">{dice_part}</span> <span style="color: {color}; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+        
+        # If we get here, check for damage type alone
+        for damage_type, color in DAMAGE_COLORS.items():
+            if damage_type in full_match.lower() and 'damage' in full_match.lower():
+                # Check if it's a missing whitespace case
+                missing_ws_pattern = rf'([a-z])({re.escape(damage_type)}\s+damage\b)'
+                missing_ws_match = re.search(missing_ws_pattern, full_match, re.IGNORECASE)
+                if missing_ws_match:
+                    preceding_char = missing_ws_match.group(1)
+                    damage_part = missing_ws_match.group(2)
+                    return f'{preceding_char}<span style="color: {color}; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+                
+                # Regular damage type
+                damage_pattern = rf'(\b{re.escape(damage_type)}\s+damage\b)'
+                damage_match = re.search(damage_pattern, full_match, re.IGNORECASE)
+                if damage_match:
+                    damage_part = damage_match.group(1)
+                    return f'<span style="color: {color}; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+        
+        return full_match
+    
+    # First pass: process all potential damage type patterns
+    processed_text = text
+    
+    # Build a comprehensive pattern that catches all cases
+    damage_patterns = []
+    for damage_type in DAMAGE_COLORS.keys():
+        # Pattern for dice + damage type
+        damage_patterns.append(rf'\b\d+d\d+\+?\d*\b\s+{re.escape(damage_type)}\s+damage\b')
+        # Pattern for damage type alone
+        damage_patterns.append(rf'\b{re.escape(damage_type)}\s+damage\b')
+        # Pattern for missing whitespace
+        damage_patterns.append(rf'[a-z]{re.escape(damage_type)}\s+damage\b')
+    
+    # Combine patterns with OR
+    combined_pattern = '|'.join(damage_patterns)
+    
+    if combined_pattern:
+        # Use a function to process matches and avoid overlaps
+        def process_match(match):
+            return replace_damage_and_dice(match)
+        
+        processed_text = re.sub(combined_pattern, process_match, processed_text, flags=re.IGNORECASE)
+    
+    # Second pass: color remaining standalone dice rolls
+    # Only color dice rolls that are not already inside span tags
+    def color_standalone_dice(match):
+        dice_text = match.group(0)
+        # Simple check: if the dice text contains span tags, it's already processed
+        if '<span' not in dice_text and '</span>' not in dice_text:
+            return f'<span style="color: #FF0000; font-family: monospace;">{dice_text}</span>'
+        return dice_text
+    
+    processed_text = re.sub(
+        r'\b\d+d\d+\+?\d*\b',
+        color_standalone_dice,
+        processed_text
+    )
+    
+    return processed_text
+
 def generate_spell_card(spell, card_template, continuation_template=None):
     card_id = generate_card_id(spell['Name'])
     lvl = spell.get('Level', '')
@@ -234,9 +364,52 @@ def generate_spell_card(spell, card_template, continuation_template=None):
 
     text = fix_text(spell.get('Text', ''))
     hl = fix_text(spell.get('At Higher Levels', ''))
+
+    # main text description enhancements
     if hl:
         hl = hl.replace('At Higher Levels.','<b>At Higher Levels.</b>')
         text += "<br><br>" + hl
+    
+    # Color damage types and dice rolls FIRST (while full "damage type damage" exists)
+    text = colorize_text(text)
+    
+    # Apply phrase shorthands
+    PHRASE_SHORTHANDS = {
+        # Damage types
+        'acid damage': 'acid',
+        'bludgeoning damage': 'bludgeoning',
+        'cold damage': 'cold',
+        'fire damage': 'fire',
+        'force damage': 'force',
+        'lightning damage': 'lightning',
+        'necrotic damage': 'necrotic',
+        'piercing damage': 'piercing',
+        'poison damage': 'poison',
+        'psychic damage': 'psychic',
+        'radiant damage': 'radiant',
+        'slashing damage': 'slashing',
+        'thunder damage': 'thunder',
+        # HP
+        'temporary hitpoints': 'temp. HP',
+        'hitpoints': 'HP',
+        'hit points': 'HP',
+        # Ability Scores
+        'Strength': 'STR',
+        'Dexterity': 'DEX',
+        'Constitution': 'CON',
+        'Intelligence': 'INT',
+        'Wisdom': 'WIS',
+        'Charisma': 'CHA',
+        # Units
+        'feet': 'ft.',
+        'foot': 'ft.',
+        'hours': 'h',
+        'hour': 'h',
+        'minutes': 'min.',
+        'minute': 'min.',
+    }
+    for k, v in PHRASE_SHORTHANDS.items():
+        text = text.replace(k, v)
     
     # primary class
     primary_class = parse_classes(spell.get('Classes', '')).title()
@@ -355,7 +528,8 @@ def generate_spell_card(spell, card_template, continuation_template=None):
     casting_time = casting_time.replace('Min','min')
     casting_time = casting_time.replace('Day','day')
     casting_time = casting_time.replace('Year','year')
-    casting_time = casting_time.replace('Hr.','hours')
+    casting_time = casting_time.replace('Hr.','h')
+    casting_time = casting_time.replace('hours','h')
 
     # name
     name = spell['Name']
@@ -407,7 +581,7 @@ def generate_spell_card(spell, card_template, continuation_template=None):
     return ''.join(cards)
 
 def main():
-    csv_path = 'data/Spells-various.csv'
+    csv_path = 'data/Spells.csv'
     css_path = 'templates/style.css'
     page_path = 'templates/page.html'
     card_path = 'templates/card.html'
