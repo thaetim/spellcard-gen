@@ -1,151 +1,131 @@
+/* -------------------------------------------------------------
+   Auto‑size card title (unchanged from your original version)
+   ------------------------------------------------------------- */
 function autoSizeCardTitle() {
     const cards = document.querySelectorAll('.card');
-    
-    cards.forEach((card) => {
-        const titleElement = card.querySelector('.card-title');
-        if (!titleElement) return;
-        
-        // Reset to default
-        let fontSize = 17;
-        const minFontSize = 15;
-        titleElement.style.fontSize = fontSize + 'pt';
-        titleElement.style.lineHeight = '1.1'; // Tight line height for titles
-        titleElement.style.overflow = 'hidden';
-        
-        // Force initial layout calculation
-        void titleElement.offsetHeight;
-        
-        // Function to check if title is multiline
+
+    cards.forEach(card => {
+        const title = card.querySelector('.card-title');
+        if (!title) return;
+
+        let fontSize = 17;               // pt
+        const minSize = 15;
+        title.style.fontSize = fontSize + 'pt';
+        title.style.lineHeight = '1.1';
+        title.style.overflow = 'hidden';
+        void title.offsetHeight;          // force layout
+
         const isMultiline = () => {
-            // Store current styles that might affect height
-            const originalWhiteSpace = titleElement.style.whiteSpace;
-            titleElement.style.whiteSpace = 'nowrap';
-            void titleElement.offsetHeight; // Force reflow
-            
-            const singleLineHeight = titleElement.offsetHeight;
-            
-            // Restore original white-space
-            titleElement.style.whiteSpace = originalWhiteSpace;
-            void titleElement.offsetHeight; // Force reflow again
-            
-            const currentHeight = titleElement.offsetHeight;
-            
-            // If current height is significantly greater than single line height, it's multiline
-            // Using 1.5 multiplier to account for line height variations
-            return currentHeight > singleLineHeight * 1.5;
+            const origWS = title.style.whiteSpace;
+            title.style.whiteSpace = 'nowrap';
+            void title.offsetHeight;
+            const single = title.offsetHeight;
+            title.style.whiteSpace = origWS;
+            void title.offsetHeight;
+            const current = title.offsetHeight;
+            return current > single * 1.5;
         };
-        
-        // Initial check
-        let isCurrentlyMultiline = isMultiline();
-        
-        // Continue shrinking while title is multiline and we're above minimum size
-        while (isCurrentlyMultiline && fontSize > minFontSize) {
-            // Reduce font size
+
+        let multiline = isMultiline();
+        while (multiline && fontSize > minSize) {
             fontSize -= 0.1;
-            titleElement.style.fontSize = fontSize + 'pt';
-            
-            // Force reflow to ensure new size is rendered
-            void titleElement.offsetHeight;
-            
-            // Check if it's still multiline with the new size
-            isCurrentlyMultiline = isMultiline();
-            
-            console.log(`Font size: ${fontSize}pt, Multiline: ${isCurrentlyMultiline}`);
-        }
-        
-        // Optional: If we hit minimum size and it's still multiline, 
-        // we could apply ellipsis or other fallback
-        if (isCurrentlyMultiline && fontSize === minFontSize) {
-            console.log('Title still multiline at minimum font size');
-            // titleElement.style.textOverflow = 'ellipsis';
+            title.style.fontSize = fontSize + 'pt';
+            void title.offsetHeight;
+            multiline = isMultiline();
         }
     });
 }
 
+/* -------------------------------------------------------------
+   Enhanced auto‑size for the description text
+   ------------------------------------------------------------- */
 function autoSizeCardText() {
     const cards = document.querySelectorAll('.card');
 
-    cards.forEach((card) => {
-        const textElement = card.querySelector('.card-text');
-        const cardBody = card.querySelector('.card-body');
-        const cardHeader = card.querySelector('.card-header');
-        const cardFooter = card.querySelector('.card-footer');
-        const attrs = cardBody?.querySelector('.card-attrs');
-        const attrInfo = cardBody?.querySelector('.card-attr-info');
+    cards.forEach(card => {
+        const textEl   = card.querySelector('.card-text');
+        const bodyEl   = card.querySelector('.card-body');
+        const header   = card.querySelector('.card-header');
+        const footer   = card.querySelector('.card-footer');
+        const attrs    = bodyEl?.querySelector('.card-attrs');
+        const attrInfo = bodyEl?.querySelector('.card-attr-info');
 
-        if (!textElement || !cardBody) return;
+        if (!textEl || !bodyEl) return;
 
-        // Reset to default
-        let fontSize = 8;
-        const lineHeightRatio = 1.2;
-        textElement.style.fontSize = fontSize + 'pt';
-        textElement.style.lineHeight = lineHeightRatio;
+        /* ---- start values ---- */
+        let fontSize = 7;                 // pt – matches your CSS default
+        const minSize = 4;                // pt – never go smaller than this
 
-        // Force layout recalculation
-        void textElement.offsetHeight;
+        /* ---- linear line‑height function ---- */
+        const lineHeightFor = size => {
+            const maxSize = 7, minSizeL = 4;
+            const maxLH = 1.2, minLH = 0.9;
+            const t = (size - minSizeL) / (maxSize - minSizeL); // 0‑1
+            return minLH + t * (maxLH - minLH);
+        };
 
-        // Calculate fixed heights
-        const cardHeight = card.offsetHeight;
-        const headerHeight = cardHeader ? cardHeader.offsetHeight : 0;
-        const footerHeight = cardFooter ? cardFooter.offsetHeight + 5 : 0;
-        const attrsHeight = attrs ? attrs.offsetHeight : 0;
-        const attrInfoHeight = attrInfo ? attrInfo.offsetHeight : 0;
+        textEl.style.fontSize   = fontSize + 'pt';
+        textEl.style.lineHeight = lineHeightFor(fontSize);
 
-        // Account for card-body padding (4pt top, 5pt left/right, 0 bottom)
-        const bodyPadding = 4;
-        // Account for card-text margin-top
-        const textMargin = 3;
+        /* ---- compute how much vertical space the text may occupy ---- */
+        const cardHeight   = card.offsetHeight;
+        const headerH      = header ? header.offsetHeight : 0;
+        const footerH      = footer ? footer.offsetHeight + 1 : 0;
+        const attrsH       = attrs ? attrs.offsetHeight : 0;
+        const attrInfoH    = attrInfo ? attrInfo.offsetHeight : 0;
+        const bodyPad      = 4;   // top padding in pt (from your CSS)
+        const textMargin   = 3;   // margin‑top in pt (from your CSS)
+        const safetyMargin = 2;   // extra pixels so we don’t stop too early
 
-        const availableHeight = cardHeight - headerHeight - footerHeight - attrsHeight - attrInfoHeight - bodyPadding - textMargin - 5;
+        const availableHeight = cardHeight - headerH - footerH
+                               - attrsH - attrInfoH
+                               - bodyPad - textMargin - 5 - safetyMargin;
 
-        // Shrink font until it fits
-        while (textElement.scrollHeight > availableHeight && fontSize > 4) {
-            fontSize -= 0.1;
-            textElement.style.fontSize = fontSize + 'pt';
-            textElement.style.lineHeight = fontSize < 6 ? 1.0 : 1.2;
-            void textElement.offsetHeight; // Force reflow
+        /* ---- shrink until it fits ---- */
+        while (textEl.scrollHeight > availableHeight && fontSize > minSize) {
+            fontSize -= 0.05;                     // finer step
+            textEl.style.fontSize   = fontSize + 'pt';
+            textEl.style.lineHeight = lineHeightFor(fontSize);
+            void textEl.offsetHeight;             // force reflow
         }
     });
 }
 
+/* -------------------------------------------------------------
+   Helper: wait until layout stops changing (your original version)
+   ------------------------------------------------------------- */
 function waitForLayoutStable(callback, interval = 200, stableCount = 3) {
-    let lastHeightSum = 0;
-    let stableTicks = 0;
-
+    let lastSum = 0, stable = 0;
     const timer = setInterval(() => {
-        const totalHeight = [...document.querySelectorAll('.card-text')]
-            .map(e => e.scrollHeight)
-            .reduce((a, b) => a + b, 0);
-
-        if (totalHeight === lastHeightSum) {
-            stableTicks++;
+        const total = [...document.querySelectorAll('.card-text')]
+            .reduce((sum, el) => sum + el.scrollHeight, 0);
+        if (total === lastSum) {
+            stable++;
         } else {
-            stableTicks = 0;
-            lastHeightSum = totalHeight;
+            stable = 0;
+            lastSum = total;
         }
-
-        if (stableTicks >= stableCount) {
+        if (stable >= stableCount) {
             clearInterval(timer);
             callback();
         }
     }, interval);
 }
 
+/* -------------------------------------------------------------
+   Run everything on load, on resize, and after layout stabilises
+   ------------------------------------------------------------- */
 function autoSizeAll() {
     autoSizeCardTitle();
     autoSizeCardText();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // First run soon after DOM ready
-    autoSizeAll();
-
-    // Wait until layout stops changing, then rerun for final sizing
+    autoSizeAll();                     // first pass
     waitForLayoutStable(() => {
-        console.log("Layout stabilized — final autoSizeAll()");
-        autoSizeAll();
+        console.log('Layout stabilized — final autoSizeAll()');
+        autoSizeAll();                 // final pass after any async content
     });
 });
 
-// Re-adjust if browser window resizes
 window.addEventListener('resize', autoSizeAll);
