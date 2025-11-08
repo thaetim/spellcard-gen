@@ -2,5 +2,5 @@
 # TODO: damage type listings - Contaminated Power, Delerium Orb
 # TODO: tables - Control Weather
 # TODO: splitting - Prismatic Wall, Pratfall, *Move Earth
-# TODO: damage type coloring - Magic Missile
+# TODO: damage type coloring - Magic Missile, Tidal Wave, Tenser's Tranformation, Wind Sprint
 # TODO: turn off word splits with '-'

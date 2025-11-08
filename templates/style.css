@@ -70,7 +70,7 @@ body {
     hyphens: auto;
     word-break: break-word;
     overflow: hidden;
-    display: ver('-webkit-box');
+    display: var('-webkit-box');
     line-clamp: 4;          /* optional max lines – change or remove */
     -webkit-line-clamp: 4;          /* optional max lines – change or remove */
     -webkit-box-orient: vertical;
@@ -193,7 +193,7 @@ body {
 .card-footer .school-name {
     background-color: var(--base-color, black);
     color: white;
-    padding: 1pt 2pt 3pt 2pt;
+    padding: 2pt 2pt 3pt 2pt;
     border-radius: 0pt;
 }
 

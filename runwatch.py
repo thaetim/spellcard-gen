@@ -17,7 +17,7 @@ class WatchHandler(FileSystemEventHandler):
     def __init__(self):
         super().__init__()
         self.last_run = 0
-        self.debounce_seconds = 1
+        self.debounce_seconds = 4
     
     def should_handle_event(self, event):
         """Check if we should handle this filesystem event"""

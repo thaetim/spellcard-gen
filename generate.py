@@ -87,8 +87,11 @@ def merge_spell_duplicates(spells_df):
                 uniq.append(x)
         return ', '.join(uniq)
 
+    # Sort by Name to ensure consistent ordering before grouping
+    spells_df = spells_df.sort_values('Name')
+    
     merged = (
-        spells_df.groupby("Name", dropna=False)
+        spells_df.groupby("Name", dropna=False, sort=False)
         .agg({
             "Source": merge_sources,
             "Classes": merge_lists,
@@ -102,6 +105,9 @@ def merge_spell_duplicates(spells_df):
         })
         .reset_index()
     )
+    
+    # Ensure consistent final ordering
+    merged = merged.sort_values('Name').reset_index(drop=True)
     return merged.to_dict(orient="records")
 
 def estimate_text_length(text):
@@ -180,6 +186,48 @@ def load_spells(csv_path):
     
     return df
 
+def detect_broken_table(text):
+    """Detect if text contains broken table with joined headers (e.g., 'aaaAaaBbb')."""
+    if not text:
+        return None
+    
+    # IMPROVED: Multiple patterns to catch different types of broken tables
+    patterns = [
+        # Pattern for sequences like "CreatureDamageHealingExtra"
+        r'\b[a-z]+(?:[A-Z][a-z]+){2,}\b',
+        # Pattern for sequences with numbers mixed in like "d8DamageType1Acid"
+        r'\b(?:[a-z]+[A-Z]|[A-Z][a-z]+|\d+){4,}\b',
+        # Pattern for table-like structures with consecutive capitalized words
+        r'\b(?:[A-Z][a-z]*){3,}(?:\d+[A-Z][a-z]*)*\b'
+    ]
+    
+    for pattern in patterns:
+        matches = re.findall(pattern, text)
+        if matches:
+            # Find the longest match (likely the header row)
+            longest_match = max(matches, key=len)
+            # Extract potential table title (text before the broken headers)
+            title_match = re.search(rf'([^.]*?){re.escape(longest_match)}', text)
+            if title_match:
+                title = title_match.group(1).strip()
+                return {'headers': longest_match, 'title': title}
+    return None
+
+def reconstruct_table(text, table_info):
+    """Reconstruct table from broken headers. Returns None if no handler for this table."""
+    title = table_info['title'].lower()
+    headers_joined = table_info['headers']
+    
+    # Split joined headers by capital letters
+    headers = RE_CAPITAL_SPLIT.split(headers_joined)
+    headers = [h for h in headers if h]  # Remove empty strings
+    
+    # Table-specific reconstruction handlers
+    # For now, we'll just return None to print spell name for unsupported tables
+    # Add specific handlers here as needed
+    
+    return None  # No handlers implemented yet
+
 def colorize_text(text):
     """Apply coloring to dice rolls and damage types in spell text."""
     # Damage type colors based on survey data (before 50% black blending)
@@ -217,7 +265,8 @@ def colorize_text(text):
         if 'd' in full_match.lower() and any(dmg_type in full_match.lower() for dmg_type in DAMAGE_COLORS.keys()):
             # This contains both dice and damage type
             for damage_type, color in DAMAGE_COLORS.items():
-                pattern = rf'(\b\d+d\d+\+?\d*\b)\s+({re.escape(damage_type)}\s+damage\b)'
+                # Pattern with optional 'nonmagical' or similar modifiers between dice and damage type
+                pattern = rf'(\b\d+d\d+\+?\d*\b)(?:\s+(?:nonmagical|magical))?\s+({re.escape(damage_type)}\s+damage\b)'
                 damage_match = re.search(pattern, full_match, re.IGNORECASE)
                 if damage_match:
                     dice_part = damage_match.group(1)
@@ -250,8 +299,8 @@ def colorize_text(text):
     # Build a comprehensive pattern that catches all cases
     damage_patterns = []
     for damage_type in DAMAGE_COLORS.keys():
-        # Pattern for dice + damage type
-        damage_patterns.append(rf'\b\d+d\d+\+?\d*\b\s+{re.escape(damage_type)}\s+damage\b')
+        # Pattern for dice + optional modifier + damage type
+        damage_patterns.append(rf'\b\d+d\d+\+?\d*\b(?:\s+(?:nonmagical|magical))?\s+{re.escape(damage_type)}\s+damage\b')
         # Pattern for damage type alone
         damage_patterns.append(rf'\b{re.escape(damage_type)}\s+damage\b')
         # Pattern for missing whitespace
@@ -286,14 +335,16 @@ def colorize_text(text):
 
     return processed_text
 
-def generate_spell_card(spell, card_template, continuation_template=None):
+def generate_spell_card(spell, card_template, continuation_template=None, paired_cards=None):
     card_id = generate_card_id(spell['Name'])
     lvl = spell.get('Level', '')
     school_raw = spell.get('School', '')
     
     # Extract ritual from school (e.g., "Abjuration (ritual)")
     IS_RITUAL = '(ritual)' in school_raw.lower()
-    school = school_raw.replace('(ritual)', '').replace('(Ritual)', '').strip().title()
+    
+    # FIXED: Clean school name for CSS class - remove parentheses and their contents
+    school = re.sub(r'\s*\([^)]*\)', '', school_raw).strip().title()
     
     # Build spell type string with colored school name
     if lvl.lower() in ('cantrip', 0, '0'):
@@ -309,54 +360,76 @@ def generate_spell_card(spell, card_template, continuation_template=None):
         hl = hl.replace('At Higher Levels.','<b>At Higher Levels.</b>')
         text += "<br><br>" + hl
     
-    # Color damage types and dice rolls FIRST (while full "damage type damage" exists)
-    text = colorize_text(text)
+    # Check for broken tables BEFORE colorization
+    table_info = detect_broken_table(text)
+    if table_info:
+        reconstructed = reconstruct_table(text, table_info)
+        if reconstructed is None:
+            # No handler for this table type - we'll print the spell name in main()
+            pass  # Keep original text for now
+        else:
+            text = reconstructed
     
-    # Apply phrase shorthands
+    # Replace .. with .
+    text = re.sub(r'\.{2,}', '.', text)
+    
+    # Make empty lines half height by replacing <br><br> with smaller spacing
+    text = text.replace('<br><br>', '<br><span style="display: block; height: 0.5em;"></span>')
+    
+    # Apply phrase shorthands BEFORE splitting and colorization
     PHRASE_SHORTHANDS = {
-        # Damage types
-        'acid damage': 'acid',
-        'bludgeoning damage': 'bludgeoning',
-        'cold damage': 'cold',
-        'fire damage': 'fire',
-        'force damage': 'force',
-        'lightning damage': 'lightning',
-        'necrotic damage': 'necrotic',
-        'piercing damage': 'piercing',
-        'poison damage': 'poison',
-        'psychic damage': 'psychic',
-        'radiant damage': 'radiant',
-        'slashing damage': 'slashing',
-        'thunder damage': 'thunder',
-        # HP
-        'temporary hitpoints': 'temp. HP',
-        'hitpoints': 'HP',
-        'hit points': 'HP',
+        # Damage types - FIXED: Use regex with word boundaries to ensure complete replacement
+        r'\bacids?\s+damage\b': 'acid',
+        r'\bbludgeonings?\s+damage\b': 'bludgeoning',
+        r'\bcolds?\s+damage\b': 'cold',
+        r'\bfires?\s+damage\b': 'fire',
+        r'\bforces?\s+damage\b': 'force',
+        r'\blightnings?\s+damage\b': 'lightning',
+        r'\bnecrotics?\s+damage\b': 'necrotic',
+        r'\bpiercings?\s+damage\b': 'piercing',
+        r'\bpoisons?\s+damage\b': 'poison',
+        r'\bpsychics?\s+damage\b': 'psychic',
+        r'\bradiants?\s+damage\b': 'radiant',
+        r'\bslashings?\s+damage\b': 'slashing',
+        r'\bthunders?\s+damage\b': 'thunder',
         # CR
-        'challenge ratings': 'CR',
-        'challenge rating': 'CR',
+        r'\bchallenge\s+ratings?\b': 'CR',
+        # AC
+        r'\barmor\s+class\b': 'AC',
+        # HP
+        r'\btemporary\s+hitpoints?\b': 'temp. HP',
+        r'\bhitpoints?\b': 'HP',
+        r'\bhit\s+points\b': 'HP',
         # Ability Scores
-        'Strength': 'STR',
-        'Dexterity': 'DEX',
-        'Constitution': 'CON',
-        'Intelligence': 'INT',
-        'Wisdom': 'WIS',
-        'Charisma': 'CHA',
+        r'\bStrength\b': 'STR',
+        r'\bDexterity\b': 'DEX',
+        r'\bConstitution\b': 'CON',
+        r'\bIntelligence\b': 'INT',
+        r'\bWisdom\b': 'WIS',
+        r'\bCharisma\b': 'CHA',
         # Units
-        'feet': 'ft.',
-        'foot': 'ft.',
-        'hours': 'h',
-        'hour': 'h',
-        'minutes': 'min.',
-        'minute': 'min.',
+        r'\bfeet\b': 'ft.',
+        r'\bfoot\b': 'ft.',
+        r'\bhours?\b': 'h',
+        r'\bminutes?\b': 'min.',
         # d20 rolls
-        'with advantage': '⥣',
-        'with disadvantage': '⥥',
-        'advantage': 'adv.',
-        'disadvantage': 'disadv.',
+        r'\bwith\s+advantage\b': '⥣',
+        r'\bwith\s+disadvantage\b': '⥥',
+        r'\badvantage\b': 'adv.',
+        r'\bdisadvantage\b': 'disadv.',
     }
-    for k, v in PHRASE_SHORTHANDS.items():
-        text = text.replace(k, v)
+    
+    # Apply all shorthand replacements using regex with case-insensitive flag
+    for pattern, replacement in PHRASE_SHORTHANDS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # Check if spell text needs to be split AFTER shorthand replacements
+    text_part1, text_part2 = split_spell_text(text)
+    
+    # Color damage types and dice rolls AFTER splitting and shorthand replacements
+    text_part1 = colorize_text(text_part1)
+    if text_part2:
+        text_part2 = colorize_text(text_part2)
     
     # primary class
     primary_class = parse_classes(spell.get('Classes', '')).title()
@@ -480,20 +553,20 @@ def generate_spell_card(spell, card_template, continuation_template=None):
     casting_time = casting_time.replace('Hr.','h')
     casting_time = casting_time.replace('hours','h')
 
-    # name
-    name = spell['Name']
+    # name with smart line breaking
+    name_raw = spell['Name']
+    name = name_raw  # Remove smart breaking for now, let browser handle it
 
     # Labels for special attributes
     casting_label = "Ritual" if IS_RITUAL else "Casting Time"
     duration_label = "Concentration" if IS_CONCENTRATION else "Duration"
 
-    # Check if spell text needs to be split
-    text_part1, text_part2 = split_spell_text(text)
-
+    # Remove pre-calculated font sizes - will be done by font_adjuster
+    
     mapping = {
         "CARD_ID": card_id,
         "PRIMARY_CLASS": '', # primary_class,
-        "NAME": name,
+    "NAME": name,
         "CASTING": casting_time,
         "CASTING_CLASS": "ritual" if IS_RITUAL else "",
         "CASTING_LABEL": casting_label,
@@ -532,7 +605,7 @@ def generate_spell_card(spell, card_template, continuation_template=None):
 def main():
     base = Path("templates")
     paths = {
-        "csv": Path("data/Spells-many.csv"),
+        "csv": Path("data/Spells-test.csv"),
         "css": base / "style.css",
         "page": base / "page.html",
         "card": base / "card.html",
@@ -544,13 +617,36 @@ def main():
 
     css, page, card, card_cont, js = [load_file(p) for p in (paths["css"], paths["page"], paths["card"], paths["card_cont"], paths["js"])]
 
+    # FIX CSS syntax error
+    css = css.replace("display: ver('-webkit-box');", "display: -webkit-box;")
+
     spells_df = load_spells(paths["csv"])
     merged_spells = merge_spell_duplicates(spells_df)
     print(f"Merged {len(spells_df)} → {len(merged_spells)} unique spells")
 
-    from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor() as ex:
-        cards = list(ex.map(lambda s: generate_spell_card(s, card, card_cont), merged_spells))
+    # Track spells with broken tables that need handlers
+    broken_table_spells = []
+    paired_cards = {}  # Track continuation pairs for font size consistency
+    
+    def generate_and_track(spell):
+        card_html = generate_spell_card(spell, card, card_cont, paired_cards)
+        # Check if spell text had broken table
+        text = spell.get('Text', '')
+        table_info = detect_broken_table(text)
+        if table_info:
+            reconstructed = reconstruct_table(text, table_info)
+            if reconstructed is None:
+                broken_table_spells.append((spell['Name'], table_info['headers']))
+        return card_html
+    
+    # Generate cards (without pre-calculated font sizes - will be done by font_adjuster)
+    cards = [generate_and_track(spell) for spell in merged_spells]
+    
+    # Print spells with unsupported broken tables
+    if broken_table_spells:
+        print(f"\nSpells with broken tables needing handlers ({len(broken_table_spells)}):")
+        for name, headers in sorted(set(broken_table_spells)):
+            print(f"  - {name}: {headers}")
 
     html = page.replace('/*{{STYLES}}*/', css).replace('<!--{{CARDS}}-->', ''.join(cards))
     Path("out").mkdir(exist_ok=True)
