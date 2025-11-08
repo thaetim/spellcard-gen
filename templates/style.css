@@ -113,7 +113,7 @@ body {
 
 .card-attrs td {
     position: relative;
-    padding: 2pt 3pt 6pt 3pt;
+    padding: 3pt 3pt 6pt 3pt;
     /* bottom padding gives room for label */
     text-align: center;
     vertical-align: middle;
@@ -146,7 +146,7 @@ body {
     background-image: var(--header-bg, none);
     background-blend-mode: multiply;
     color: white;
-    padding-top: 1pt;
+    padding-top: 0pt;
     padding-left: 1pt;
     padding-right: 2pt;
     padding-bottom: 1pt;
@@ -193,7 +193,7 @@ body {
 .card-footer .school-name {
     background-color: var(--base-color, black);
     color: white;
-    padding: 2pt 2pt 3pt 2pt;
+    padding: 1pt 2pt 3pt 2pt;
     border-radius: 0pt;
 }
 
