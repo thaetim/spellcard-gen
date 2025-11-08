@@ -561,3 +561,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# TODO: the last card on in the resulting file seems to be scrambled, an amalgamation of many cards - # FIXME
+# TODO: broken tables fixing - detect long words with aaaAaa patterns (joined table headers); if so, detect the tables title and use a applicable function to reconstruct the table; if no applicable table_reconstruction function for this table title, print the spell's name to the console; (any not supported table reconstruction functions will have to be prepared later)
+# TODO: in the final text, replace .. to .
+# TODO: in the final text, make empty lines half their height
