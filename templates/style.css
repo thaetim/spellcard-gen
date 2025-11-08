@@ -67,9 +67,9 @@ body {
     font-size: clamp(5pt, 0.9vw, 7pt);
     /* Line‑height follows the same linear slope as the JS version */
     line-height: clamp(0.9, 0.15vw + 0.75, 1.2);
-    hyphens: auto;
+    /* hyphens: auto;
     word-break: break-word;
-    overflow: hidden;
+    overflow: hidden; */
     display: var('-webkit-box');
     line-clamp: 4;          /* optional max lines – change or remove */
     -webkit-line-clamp: 4;          /* optional max lines – change or remove */
@@ -325,4 +325,76 @@ body {
 .card-class {
     opacity: 0.4;
     color: white;
+}
+
+/* Table Styles for Spell Cards */
+.card-text table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5em 0;
+    font-size: 0.9em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 2pt;
+    border: 1px solid var(--footer-color); /* Ensure table has bottom border */
+}
+
+.card-text th {
+    background-color: color-mix(in srgb, var(--footer-color) 10%, transparent);
+    color: #000; /* Black font color */
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--footer-color);
+    padding: 0.3em 0.5em; /* Add some padding for better appearance */
+}
+
+.card-text td {
+    text-align: left;
+    border: 1px solid var(--footer-color);
+    padding: 0.3em 0.5em; /* Add some padding for better appearance */
+}
+
+/* Make first column width fit content */
+.card-text table {
+    table-layout: auto; /* Allow columns to size based on content */
+}
+
+.card-text th:first-child,
+.card-text td:first-child {
+    width: 1%; /* Force first column to be as small as possible */
+    white-space: nowrap; /* Prevent text wrapping in first column */
+}
+
+/* Ensure bottom border for the entire table */
+.card-text table {
+    border-bottom: 1px solid var(--footer-color);
+}
+
+.card-text tr:last-child td {
+    border-bottom: 1px solid var(--footer-color); /* Keep bottom border on last row */
+}
+
+.card-text tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.card-text tr:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Special styling for damage type tables */
+.card-text table:has(th:contains('Damage')) th {
+    background-color: color-mix(in srgb, #8b0000 10%, transparent);
+    color: #000;
+}
+
+.card-text table:has(th:contains('Level')) th {
+    background-color: color-mix(in srgb, #006400 10%, transparent);
+    color: #000;
+}
+
+.card-text table:has(th:contains('d')) th {
+    background-color: color-mix(in srgb, #00008b 10%, transparent);
+    color: #000;
 }

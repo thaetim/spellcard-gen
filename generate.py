@@ -1,7 +1,7 @@
-import os, re, random
+import re, random
 from pathlib import Path
-from collections import defaultdict
 import pandas as pd
+from html import escape
 
 # Constants
 N_SAMPLE_THRESH = 200
@@ -17,6 +17,35 @@ RE_HTML_TAGS = re.compile(r'<[^>]+>')
 RE_CAPITAL_SPLIT = re.compile(r'(?<![A-Z\s])(?=[A-Z])')
 RE_SENTENCE_END = re.compile(r'[.;]\s+')
 RE_WHITESPACE = re.compile(r'\s+')
+RE_HTML_TAG_PAIRS = re.compile(r'<(\w+)[^>]*>.*?</\1>')
+
+def balance_html_tags(text):
+    """Ensure HTML tags are properly balanced when splitting text."""
+    if not text or '<' not in text:
+        return text
+    
+    # Count opening and closing tags
+    open_tags = re.findall(r'<(\w+)[^>]*>', text)
+    close_tags = re.findall(r'</(\w+)>', text)
+    
+    # Create stack to track tag balancing
+    stack = []
+    for tag in open_tags:
+        stack.append(tag)
+    
+    for tag in close_tags:
+        if stack and stack[-1] == tag:
+            stack.pop()
+        else:
+            # Unmatched closing tag, remove it
+            text = re.sub(f'</{tag}>', '', text, count=1)
+    
+    # Close any remaining open tags
+    while stack:
+        tag = stack.pop()
+        text += f'</{tag}>'
+    
+    return text
 
 def fix_text(text):
     if not text: 
@@ -113,33 +142,6 @@ def merge_spell_duplicates(spells_df):
 def estimate_text_length(text):
     return len(RE_HTML_TAGS.sub('', text or ''))
 
-def split_spell_text(text, target_length=800):
-    if estimate_text_length(text) < target_length:
-        return text, None
-
-    clean_text = RE_HTML_TAGS.sub('', text)
-    total_len = len(clean_text)
-    target_pos = int(total_len * 0.35)
-
-    def best_break(text, regex):
-        best, dist = None, float('inf')
-        for match in regex.finditer(text):
-            html_pos = match.end()
-            clean_pos = len(RE_HTML_TAGS.sub('', text[:html_pos]))
-            d = abs(clean_pos - target_pos)
-            if d < dist:
-                dist, best = d, html_pos
-        return best, dist
-
-    html_break, dist = best_break(text, RE_SENTENCE_END)
-    if html_break is None or dist > total_len * 0.2:
-        html_break, _ = best_break(text, RE_WHITESPACE)
-
-    if not html_break:
-        html_break = min(len(text), target_pos)
-
-    return text[:html_break].strip(), text[html_break:].strip() or None
-
 def blend_with_black(hex_color, blend_percent=50):
     if not hex_color or hex_color.lower() == '#000000':
         return hex_color
@@ -191,7 +193,7 @@ def detect_broken_table(text):
     if not text:
         return None
     
-    # IMPROVED: Multiple patterns to catch different types of broken tables
+    # Multiple patterns to catch different types of broken tables
     patterns = [
         # Pattern for sequences like "CreatureDamageHealingExtra"
         r'\b[a-z]+(?:[A-Z][a-z]+){2,}\b',
@@ -213,20 +215,127 @@ def detect_broken_table(text):
                 return {'headers': longest_match, 'title': title}
     return None
 
-def reconstruct_table(text, table_info):
-    """Reconstruct table from broken headers. Returns None if no handler for this table."""
-    title = table_info['title'].lower()
-    headers_joined = table_info['headers']
+def sanitize_html(text):
+    """Ensure text doesn't contain malformed HTML that could break the document."""
+    if not text:
+        return text
     
-    # Split joined headers by capital letters
-    headers = RE_CAPITAL_SPLIT.split(headers_joined)
-    headers = [h for h in headers if h]  # Remove empty strings
+    # Fix common HTML issues
+    text = re.sub(r'</br>', '<br/>', text)  # Fix incorrect </br> closing tags
+    text = re.sub(r'<br\s*/?>', '<br/>', text)  # Ensure proper self-closing br tags
     
-    # Table-specific reconstruction handlers
-    # For now, we'll just return None to print spell name for unsupported tables
-    # Add specific handlers here as needed
+    # Fix unclosed span tags by balancing them
+    open_spans = text.count('<span')
+    close_spans = text.count('</span>')
     
-    return None  # No handlers implemented yet
+    if open_spans > close_spans:
+        # Add missing closing spans
+        text += '</span>' * (open_spans - close_spans)
+    elif close_spans > open_spans:
+        # Remove extra closing spans
+        for _ in range(close_spans - open_spans):
+            text = text.replace('</span>', '', 1)
+    
+    # Remove any span tags that contain broken content
+    text = re.sub(r'<span[^>]*>.*?</br>.*?</span>', lambda m: m.group(0).replace('</br>', '<br/>'), text)
+    
+    return text
+
+def split_spell_text(text, target_length=800):
+    """Split text while preserving HTML tag integrity and not breaking tables."""
+    if estimate_text_length(text) < target_length:
+        return sanitize_html(text), None
+
+    # First, sanitize the input text
+    text = sanitize_html(text)
+    
+    clean_text = RE_HTML_TAGS.sub('', text)
+    total_len = len(clean_text)
+    target_pos = int(total_len * 0.35)
+
+    def find_safe_breakpoint(text, target_clean_pos):
+        """Find a safe breakpoint that doesn't split HTML tags or tables."""
+        current_clean_pos = 0
+        in_tag = False
+        in_table = False
+        tag_buffer = ""
+        
+        for i, char in enumerate(text):
+            if char == '<':
+                in_tag = True
+                tag_buffer = char
+            elif char == '>' and in_tag:
+                in_tag = False
+                tag_buffer += char
+                
+                # Check if we're entering or leaving a table
+                if tag_buffer.startswith('<table'):
+                    in_table = True
+                elif tag_buffer.startswith('</table'):
+                    in_table = False
+                    
+                # Skip tag content for clean text positioning
+                continue
+            elif in_tag:
+                tag_buffer += char
+                continue
+            else:
+                current_clean_pos += 1
+                
+            # If we're in a table, don't break until we're out of it
+            if current_clean_pos >= target_clean_pos and not in_tag and not in_table:
+                # Look for sentence end or whitespace, but avoid breaking tables
+                for lookahead in range(i, min(len(text), i + 100)):
+                    # Check if we're about to enter a table
+                    if text[lookahead:lookahead+7] == '<table>':
+                        # Don't break right before a table, include it in part1
+                        continue
+                    
+                    # Look for good break points
+                    if text[lookahead] in '.;' and lookahead + 1 < len(text) and text[lookahead + 1] in ' \t\n':
+                        # Make sure we're not breaking a table
+                        window = text[max(0, lookahead-20):min(len(text), lookahead+50)]
+                        if '<table' not in window and '</table>' not in window:
+                            return lookahead + 2  # Include the space after punctuation
+                    elif text[lookahead] in ' \t\n' and not in_tag:
+                        # Make sure we're not breaking a table
+                        window = text[max(0, lookahead-20):min(len(text), lookahead+50)]
+                        if '<table' not in window and '</table>' not in window:
+                            return lookahead + 1
+        
+        # If we couldn't find a safe breakpoint, try to break after the next table if we're in one
+        if in_table:
+            table_end = text.find('</table>', i)
+            if table_end != -1:
+                return table_end + 8  # Include the </table> tag
+        
+        return min(len(text), target_clean_pos)
+
+    html_break = find_safe_breakpoint(text, target_pos)
+    
+    # If the breakpoint would split a table, move it to after the table
+    if html_break < len(text):
+        # Check if we're breaking in the middle of a table
+        text_before = text[:html_break]
+        text_after = text[html_break:]
+        
+        # Count table tags before and after the break
+        tables_before = text_before.count('<table')
+        tables_closed_before = text_before.count('</table>')
+        
+        # If there's an unclosed table before the break, move break to after the table
+        if tables_before > tables_closed_before:
+            next_table_end = text.find('</table>', html_break)
+            if next_table_end != -1:
+                html_break = next_table_end + 8  # Position after </table>
+    
+    if not html_break:
+        html_break = min(len(text), target_pos)
+
+    part1 = sanitize_html(text[:html_break].strip())
+    part2 = sanitize_html(text[html_break:].strip()) or None
+    
+    return part1, part2
 
 def colorize_text(text):
     """Apply coloring to dice rolls and damage types in spell text."""
@@ -253,7 +362,9 @@ def colorize_text(text):
     if not text:
         return text
     
-    # We'll process in a single pass using a replacement function
+    # First, ensure the text is properly sanitized
+    text = sanitize_html(text)
+    
     def replace_damage_and_dice(match):
         full_match = match.group(0)
         
@@ -273,50 +384,42 @@ def colorize_text(text):
                     damage_part = damage_match.group(2)
                     return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{dice_part}</span> <span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_part}</span>'
         
-        # If we get here, check for damage type alone
+        # If we get here, check for damage type alone (including shorthand versions)
         for damage_type, color in DAMAGE_COLORS.items():
-            if damage_type in full_match.lower() and 'damage' in full_match.lower():
-                # Check if it's a missing whitespace case
-                missing_ws_pattern = rf'([a-z])({re.escape(damage_type)}\s+damage\b)'
-                missing_ws_match = re.search(missing_ws_pattern, full_match, re.IGNORECASE)
-                if missing_ws_match:
-                    preceding_char = missing_ws_match.group(1)
-                    damage_part = missing_ws_match.group(2)
-                    return f'{preceding_char}<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_part}</span>'
-                
-                # Regular damage type
-                damage_pattern = rf'(\b{re.escape(damage_type)}\s+damage\b)'
-                damage_match = re.search(damage_pattern, full_match, re.IGNORECASE)
-                if damage_match:
-                    damage_part = damage_match.group(1)
-                    return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_part}</span>'
+            # Check for both full "fire damage" and shorthand "fire" after replacement
+            if damage_type in full_match.lower():
+                # Check if it's a shorthand damage type (just the word itself)
+                shorthand_pattern = rf'\b{re.escape(damage_type)}\b'
+                shorthand_match = re.search(shorthand_pattern, full_match, re.IGNORECASE)
+                if shorthand_match:
+                    # Make sure this isn't part of a larger word and is likely a damage type
+                    context = text[max(0, match.start()-10):min(len(text), match.end()+10)]
+                    if re.search(rf'\d+d\d+.*?\b{re.escape(damage_type)}\b', context) or \
+                       re.search(rf'\b{re.escape(damage_type)}\b(?:\s|$)', full_match):
+                        return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{damage_type}</span>'
         
         return full_match
     
-    # First pass: process all potential damage type patterns
+    # Process all potential damage type patterns
     processed_text = text
     
     # Build a comprehensive pattern that catches all cases
     damage_patterns = []
     for damage_type in DAMAGE_COLORS.keys():
-        # Pattern for dice + optional modifier + damage type
         damage_patterns.append(rf'\b\d+d\d+\+?\d*\b(?:\s+(?:nonmagical|magical))?\s+{re.escape(damage_type)}\s+damage\b')
-        # Pattern for damage type alone
         damage_patterns.append(rf'\b{re.escape(damage_type)}\s+damage\b')
-        # Pattern for missing whitespace
         damage_patterns.append(rf'[a-z]{re.escape(damage_type)}\s+damage\b')
+        damage_patterns.append(rf'\b{re.escape(damage_type)}\b')
     
-    # Combine patterns with OR
     combined_pattern = '|'.join(damage_patterns)
     
     if combined_pattern:
-        # Use a function to process matches and avoid overlaps
         def process_match(match):
             return replace_damage_and_dice(match)
         
         processed_text = re.sub(combined_pattern, process_match, processed_text, flags=re.IGNORECASE)
     
-    # Second pass: color remaining standalone dice rolls
+    # Color remaining standalone dice rolls
     def color_standalone_dice(match):
         dice_text = match.group(0)
         # Skip if dice are already within or immediately before a colored span
@@ -333,7 +436,32 @@ def colorize_text(text):
         processed_text
     )
 
-    return processed_text
+    # Final sanitization to fix any HTML issues introduced during processing
+    return sanitize_html(processed_text)
+
+def fix_broken_line_breaks(text):
+    """Fix specific broken HTML patterns like </br> and malformed span tags."""
+    if not text:
+        return text
+    
+    # Fix </br> (should be <br/>)
+    text = re.sub(r'</br>', '<br/>', text)
+    
+    # Fix malformed span tags with line breaks inside
+    text = re.sub(
+        r'<span[^>]*>([^<]*)</br>([^<]*)</span>', 
+        r'<span style="display: block; height: 0.5em;"></span><span>\1<br/>\2</span>', 
+        text
+    )
+    
+    # Fix span tags that contain display: block with broken content
+    text = re.sub(
+        r'<span[^>]*display:\s*block[^>]*>.*?</br>', 
+        '<span style="display: block; height: 0.5em;"></span>', 
+        text
+    )
+    
+    return text
 
 def generate_spell_card(spell, card_template, continuation_template=None, paired_cards=None):
     card_id = generate_card_id(spell['Name'])
@@ -352,29 +480,28 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
     else:
         spell_type = f'{lvl}-level <span class="school-name">{school}</span>'
 
-    text = fix_text(spell.get('Text', ''))
-    hl = fix_text(spell.get('At Higher Levels', ''))
+    # Use the spell data as-is (already replaced with fixed version if available)
+    text = spell.get('Text', '')
+    hl = spell.get('At Higher Levels', '')
+
+    text = fix_text(text)
+    hl = fix_text(hl)
 
     # main text description enhancements
     if hl:
         hl = hl.replace('At Higher Levels.','<b>At Higher Levels.</b>')
         text += "<br><br>" + hl
     
-    # Check for broken tables BEFORE colorization
-    table_info = detect_broken_table(text)
-    if table_info:
-        reconstructed = reconstruct_table(text, table_info)
-        if reconstructed is None:
-            # No handler for this table type - we'll print the spell name in main()
-            pass  # Keep original text for now
-        else:
-            text = reconstructed
+    # Note: We don't check for broken tables here anymore - that's done in main()
     
     # Replace .. with .
     text = re.sub(r'\.{2,}', '.', text)
     
     # Make empty lines half height by replacing <br><br> with smaller spacing
     text = text.replace('<br><br>', '<br><span style="display: block; height: 0.5em;"></span>')
+    
+    # Apply the specific fix for broken line breaks
+    text = fix_broken_line_breaks(text)
     
     # Apply phrase shorthands BEFORE splitting and colorization
     PHRASE_SHORTHANDS = {
@@ -398,6 +525,7 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
         r'\barmor\s+class\b': 'AC',
         # HP
         r'\btemporary\s+hitpoints?\b': 'temp. HP',
+        r'\btemporary\s+HP?\b': 'temp. HP',
         r'\bhitpoints?\b': 'HP',
         r'\bhit\s+points\b': 'HP',
         # Ability Scores
@@ -413,23 +541,52 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
         r'\bhours?\b': 'h',
         r'\bminutes?\b': 'min.',
         # d20 rolls
-        r'\bwith\s+advantage\b': '⥣',
-        r'\bwith\s+disadvantage\b': '⥥',
+        # r'\bwith\s+advantage\b': '⥣',
+        # r'\bwith\s+disadvantage\b': '⥥',
         r'\badvantage\b': 'adv.',
         r'\bdisadvantage\b': 'disadv.',
     }
     
     # Apply all shorthand replacements using regex with case-insensitive flag
     for pattern, replacement in PHRASE_SHORTHANDS.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        text = re.sub(pattern, replacement, text)
     
     # Check if spell text needs to be split AFTER shorthand replacements
     text_part1, text_part2 = split_spell_text(text)
+    
+    # If part1 ends with an incomplete table, move the entire table to part2
+    if text_part1 and text_part2:
+        # Check if part1 has an unclosed table
+        tables_in_part1 = text_part1.count('<table')
+        tables_closed_in_part1 = text_part1.count('</table>')
+        
+        if tables_in_part1 > tables_closed_in_part1:
+            # Find where the table starts in part1
+            last_table_start = text_part1.rfind('<table')
+            if last_table_start != -1:
+                # Move everything from the table start to part2
+                text_before_table = text_part1[:last_table_start].strip()
+                text_with_table = text_part1[last_table_start:] + text_part2
+                
+                # Only split if we have content before the table
+                if text_before_table and len(text_before_table) > 50:
+                    text_part1 = text_before_table
+                    text_part2 = text_with_table
+                else:
+                    # If there's not much content before the table, keep table in part1
+                    # but don't split at all
+                    text_part1 = text
+                    text_part2 = None
     
     # Color damage types and dice rolls AFTER splitting and shorthand replacements
     text_part1 = colorize_text(text_part1)
     if text_part2:
         text_part2 = colorize_text(text_part2)
+    
+    # Sanitize HTML to prevent malformed content
+    text_part1 = sanitize_html(text_part1)
+    if text_part2:
+        text_part2 = sanitize_html(text_part2)
     
     # primary class
     primary_class = parse_classes(spell.get('Classes', '')).title()
@@ -585,6 +742,11 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
         "SCHOOL": school
     }
 
+    # Sanitize all mapping values to prevent HTML injection
+    for key, value in mapping.items():
+        if key not in ["TEXT", "SPELL_TYPE"]:  # These already contain intentional HTML
+            mapping[key] = escape(str(value))
+
     cards = [replace_placeholders(card_template, mapping)]
     
     # Generate continuation card if needed
@@ -598,6 +760,12 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
             "SPELL_TYPE": spell_type,
             "SCHOOL": school
         }
+        
+        # Sanitize continuation mapping
+        for key, value in continuation_mapping.items():
+            if key not in ["TEXT", "SPELL_TYPE"]:
+                continuation_mapping[key] = escape(str(value))
+                
         cards.append(replace_placeholders(continuation_template, continuation_mapping))
     
     return ''.join(cards)
@@ -605,7 +773,8 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
 def main():
     base = Path("templates")
     paths = {
-        "csv": Path("data/Spells-test.csv"),
+        "csv": Path("data/Spells-various.csv"),
+        "fixed_csv": Path("data/Spells-fixed.csv"),  # Add fixed spells CSV
         "css": base / "style.css",
         "page": base / "page.html",
         "card": base / "card.html",
@@ -620,31 +789,47 @@ def main():
     # FIX CSS syntax error
     css = css.replace("display: ver('-webkit-box');", "display: -webkit-box;")
 
+    # Load fixed spells if available
+    fixed_spells = {}
+    try:
+        fixed_df = pd.read_csv(paths["fixed_csv"], encoding='utf-8').fillna("")
+        for _, spell in fixed_df.iterrows():
+            fixed_spells[spell['Name']] = spell.to_dict()
+        print(f"Loaded {len(fixed_spells)} fixed spells from {paths['fixed_csv']}")
+    except Exception as e:
+        print(f"Could not load fixed spells: {e}")
+
     spells_df = load_spells(paths["csv"])
     merged_spells = merge_spell_duplicates(spells_df)
     print(f"Merged {len(spells_df)} → {len(merged_spells)} unique spells")
 
-    # Track spells with broken tables that need handlers
+    # Track spells with broken tables that need fixing
     broken_table_spells = []
     paired_cards = {}  # Track continuation pairs for font size consistency
     
     def generate_and_track(spell):
+        # Use fixed spell data if available, otherwise use original
+        spell_name = spell['Name']
+        if spell_name in fixed_spells:
+            print(f"Using fixed data for {spell_name}")
+            spell = fixed_spells[spell_name]
+        
         card_html = generate_spell_card(spell, card, card_cont, paired_cards)
-        # Check if spell text had broken table
+        
+        # Check if spell text has broken table and wasn't fixed
         text = spell.get('Text', '')
         table_info = detect_broken_table(text)
-        if table_info:
-            reconstructed = reconstruct_table(text, table_info)
-            if reconstructed is None:
-                broken_table_spells.append((spell['Name'], table_info['headers']))
+        if table_info and spell_name not in fixed_spells:
+            broken_table_spells.append((spell_name, table_info['headers']))
+            
         return card_html
     
-    # Generate cards (without pre-calculated font sizes - will be done by font_adjuster)
+    # Generate cards
     cards = [generate_and_track(spell) for spell in merged_spells]
     
-    # Print spells with unsupported broken tables
+    # Print spells with broken tables that still need fixing
     if broken_table_spells:
-        print(f"\nSpells with broken tables needing handlers ({len(broken_table_spells)}):")
+        print(f"\nSpells with broken tables needing fixes ({len(broken_table_spells)}):")
         for name, headers in sorted(set(broken_table_spells)):
             print(f"  - {name}: {headers}")
 
@@ -659,6 +844,4 @@ if __name__ == "__main__":
     main()
 
 # TODO: the last card on in the resulting file seems to be scrambled, an amalgamation of many cards - # FIXME
-# TODO: broken tables fixing - detect long words with aaaAaa patterns (joined table headers); if so, detect the tables title and use a applicable function to reconstruct the table; if no applicable table_reconstruction function for this table title, print the spell's name to the console; (any not supported table reconstruction functions will have to be prepared later)
-# TODO: in the final text, replace .. to .
-# TODO: in the final text, make empty lines half their height
+# TODO: broken tables fixing - detect long words with aaaAaa patterns (joined table headers);
