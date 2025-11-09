@@ -340,13 +340,14 @@ body {
 
 .card-text th {
     background-color: color-mix(in srgb, var(--footer-color) 10%, transparent);
-    color: #000; /* Black font color */
-    font-weight: bold;
+    color: var(--footer-color);
+    /* font-weight: bold; */
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: 1px solid var(--footer-color);
-    padding: 0.3em 0.5em; /* Add some padding for better appearance */
+    padding: 0.3em 0.5em;
+     /* Add some padding for better appearance */
 }
 
 .card-text td {
