@@ -1,6 +1,6 @@
 """Main script for generating spell cards."""
 from pathlib import Path
-from spell_processing import load_spells, merge_spell_duplicates, load_fixed_spells, detect_broken_table
+from spell_processing import load_spells, merge_spell_duplicates, load_fixed_spells, detect_broken_elements
 from card_generator import generate_spell_card
 
 
@@ -35,7 +35,7 @@ def main():
     merged_spells = merge_spell_duplicates(spells_df)
     print(f"Merged {len(spells_df)} → {len(merged_spells)} unique spells")
 
-    broken_table_spells = []
+    broken_spell_texts = []
     paired_cards = {}
     
     def generate_and_track(spell):
@@ -47,18 +47,18 @@ def main():
         card_html = generate_spell_card(spell, card, card_cont, paired_cards)
         
         text = spell.get('Text', '')
-        table_info = detect_broken_table(text)
-        if table_info and spell_name not in fixed_spells:
-            broken_table_spells.append((spell_name, table_info['headers']))
+        info = detect_broken_elements(text)
+        if info and spell_name not in fixed_spells:
+            broken_spell_texts.append((spell_name, info))
             
         return card_html
     
     cards = [generate_and_track(spell) for spell in merged_spells]
     
-    if broken_table_spells:
-        print(f"\nSpells with broken tables needing fixes ({len(broken_table_spells)}):")
-        for name, headers in sorted(set(broken_table_spells)):
-            print(f"  - {name}: {headers}")
+    if broken_spell_texts:
+        print(f"\nSpells needing manual description fix ({len(broken_spell_texts)}):")
+        for name, headers in sorted(set(broken_spell_texts)):
+            print(f"  - {name}") # : {headers}")
 
     html = page.replace('/*{{STYLES}}*/', css).replace('<!--{{CARDS}}-->', ''.join(cards))
     Path("out").mkdir(exist_ok=True)

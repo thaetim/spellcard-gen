@@ -156,7 +156,6 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
     text = re.sub(r'\.{2,}', '.', text)
     text = text.replace('<br><br>', '<br><span style="display: block; height: 0.5em;"></span>')
     text = fix_broken_line_breaks(text)
-    text = apply_phrase_shorthands(text)
     
     text_part1, text_part2 = split_spell_text(text)
     
@@ -177,13 +176,10 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
                     text_part1 = text
                     text_part2 = None
     
-    text_part1 = colorize_text(text_part1)
-    if text_part2:
-        text_part2 = colorize_text(text_part2)
-    
-    text_part1 = sanitize_html(text_part1)
-    if text_part2:
-        text_part2 = sanitize_html(text_part2)
+    for proc_func in [colorize_text, apply_phrase_shorthands, sanitize_html]:
+        text_part1 = proc_func(text_part1)
+        if text_part2:
+            text_part2 = proc_func(text_part2) 
     
     primary_class = parse_classes(spell.get('Classes', '')).title()
     source = spell.get('Source', '')

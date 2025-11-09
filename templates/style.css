@@ -342,6 +342,7 @@ body {
     background-color: color-mix(in srgb, var(--footer-color) 10%, transparent);
     color: var(--footer-color);
     /* font-weight: bold; */
+    /* font-size: 3pt; */
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;

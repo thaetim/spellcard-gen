@@ -106,23 +106,25 @@ def load_fixed_spells(csv_path):
         return {}
 
 
-def detect_broken_table(text):
-    """Detect if text contains broken table with joined headers."""
+def detect_broken_elements(text):
     if not text:
         return None
     
     patterns = [
+        # # broken table headers
         r'\b[a-z]+(?:[A-Z][a-z]+){2,}\b',
         r'\b(?:[a-z]+[A-Z]|[A-Z][a-z]+|\d+){4,}\b',
-        r'\b(?:[A-Z][a-z]*){3,}(?:\d+[A-Z][a-z]*)*\b'
+        r'\b(?:[A-Z][a-z]*){3,}(?:\d+[A-Z][a-z]*)*\b',
+        # broken lists
+        r'[a-zA-Z][a-zA-Z]\d'
     ]
     
+    detected_issues = {}
+
     for pattern in patterns:
         matches = re.findall(pattern, text)
         if matches:
-            longest_match = max(matches, key=len)
-            title_match = re.search(rf'([^.]*?){re.escape(longest_match)}', text)
-            if title_match:
-                title = title_match.group(1).strip()
-                return {'headers': longest_match, 'title': title}
-    return None
+            detected_issues = tuple(matches)
+            break
+    
+    return detected_issues if detected_issues else None

@@ -213,6 +213,7 @@ def apply_phrase_shorthands(text):
         r'\bminutes?\b': 'min.',
         r'\badvantage\b': 'adv.',
         r'\bdisadvantage\b': 'disadv.',
+        r'\bcritical hit\b': 'crit',
     }
     
     for pattern, replacement in PHRASE_SHORTHANDS.items():

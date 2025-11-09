@@ -33,12 +33,13 @@ DAMAGE_COLORS = {
     for damage_type, color in DAMAGE_COLORS_BASE.items()
 }
 
-
 def colorize_text(text):
     """
     Apply coloring to damage expressions:
     - "XdY [+ Z] damage_type" → colored together (e.g., "2d4 + 1 force")
     - "N damage_type" → colored together (e.g., "1 force")
+    - "DMG_TYPE damage" → colored (e.g., "fire damage")
+    - "DMG_TYPE(and|or|,)DMG_TYPE chains" → each colored individually (e.g., "acid, fire, cold, lightning, or poison damage")
     - "XdY" alone → blue (e.g., "1d4 missiles")
     """
     if not text:
@@ -47,11 +48,38 @@ def colorize_text(text):
     from text_formatting import sanitize_html
     text = sanitize_html(text)
     
-    # Step 1: Color dice expressions with damage type (handles "1d4 + 1 force" as one unit)
+    # Step 1: Color damage type chains FIRST (e.g., "acid, fire, cold, lightning, or poison damage")
+    # Match at least 2 damage types separated by conjunctions, followed by " damage"
+    damage_types_pattern = '|'.join(re.escape(dmg_type) for dmg_type in DAMAGE_COLORS.keys())
+    pattern_chain = rf'\b({damage_types_pattern})(?:\s*,\s*(?:{damage_types_pattern}))+(?:\s*,?\s*(?:and|or)\s*(?:{damage_types_pattern}))?\s+damage\b'
+    
+    def replace_damage_chain(match):
+        full = match.group(0)
+        if '<span' in full:
+            return full
+        
+        # Extract the full damage chain (everything except " damage")
+        damage_chain = full.rsplit(' damage', 1)[0]
+        
+        # Color each damage type individually within the chain
+        colored_chain = damage_chain
+        for dmg_type in DAMAGE_COLORS.keys():
+            color = DAMAGE_COLORS[dmg_type]
+            # Replace each damage type with a colored version
+            colored_chain = re.sub(
+                rf'\b({re.escape(dmg_type)})\b',
+                rf'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">\1</span>',
+                colored_chain,
+                flags=re.IGNORECASE
+            )
+        
+        return f'{colored_chain} damage'
+    
+    text = re.sub(pattern_chain, replace_damage_chain, text, flags=re.IGNORECASE)
+    
+    # Step 2: Color dice expressions with damage type (handles "1d4 + 1 force" as one unit)
     for damage_type, color in DAMAGE_COLORS.items():
-        # Pattern: XdY [+ N] [+ N] ... damage_type
-        # Matches full expressions like "1d4 + 1 force" or "2d6 + 3 + 1 fire"
-        pattern = rf'(\d+d\d+(?:\s*\+\s*\d+)*)\s+({re.escape(damage_type)})(?:\s+damage)?'
+        pattern = rf'((?:\d+d\d+\s*\+\s*)*\d+d\d+(?:\s*\+\s*\d+)*)\s+({re.escape(damage_type)})(?:\s+damage)?'
         
         def replace_dice_damage(match):
             if '<span' in match.group(0):
@@ -63,7 +91,7 @@ def colorize_text(text):
         
         text = re.sub(pattern, replace_dice_damage, text, flags=re.IGNORECASE)
     
-    # Step 2: Color plain number + damage type (like "1 force")
+    # Step 3: Color plain number + damage type (like "1 force")
     for damage_type, color in DAMAGE_COLORS.items():
         pattern = rf'\b(\d+)\s+({re.escape(damage_type)})(?:\s+damage)?'
         
@@ -88,7 +116,7 @@ def colorize_text(text):
         
         text = re.sub(pattern, replace_num_damage, text, flags=re.IGNORECASE)
     
-    # Step 3: Color standalone dice rolls (not followed by damage type)
+    # Step 4: Color standalone dice rolls (not followed by damage type)
     def color_standalone_dice(match):
         dice_text = match.group(0)
         
@@ -99,16 +127,15 @@ def colorize_text(text):
         if '<span' in window_before and '</span>' not in window_before:
             return dice_text
         
-        # Check if followed by + N (modifier) then damage type
-        after_text = text[end:min(len(text), end + 50)]
+        # Check if followed by + N (modifier) or + XdY then damage type
+        after_text = text[end:min(len(text), end + 100)]
         for dmg_type in DAMAGE_COLORS.keys():
-            # Check for patterns like "+ 1 force" or "force" after dice
-            if re.match(rf'^\s*(?:\+\s*\d+\s+)?{re.escape(dmg_type)}\b', after_text, re.IGNORECASE):
+            if re.match(rf'^\s*(?:(?:\+\s*(?:\d+|\d+d\d+)\s*)*){re.escape(dmg_type)}\b', after_text, re.IGNORECASE):
                 return dice_text
         
         color = '#0000FF'
         return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace;">{dice_text}</span>'
     
-    text = re.sub(r'\b\d+d\d+\b(?!\s*\+)', color_standalone_dice, text)
+    text = re.sub(r'\b\d+d\d+\b', color_standalone_dice, text)
     
     return sanitize_html(text)
