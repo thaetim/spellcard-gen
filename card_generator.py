@@ -146,7 +146,7 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
     text = spell.get('Text', '')
     hl = spell.get('At Higher Levels', '')
     
-    text = fix_text(text)
+    text = fix_text(text, spell['Name'])
     hl = fix_text(hl)
     
     if hl:

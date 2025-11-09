@@ -1,7 +1,5 @@
 """Text formatting and HTML processing utilities."""
 import re
-from html import escape
-
 
 # Precompiled regex patterns
 RE_HTML_TAGS = re.compile(r'<[^>]+>')
@@ -9,9 +7,8 @@ RE_CAPITAL_SPLIT = re.compile(r'(?<![A-Z\s])(?=[A-Z])')
 RE_SENTENCE_END = re.compile(r'[.;]\s+')
 RE_WHITESPACE = re.compile(r'\s+')
 
-
-def fix_text(text):
-    """Fix spacing and formatting in spell text."""
+def fix_text(text, print_spell = None):
+    """Fix enumeration spacing and formatting in spell text."""
     if not text: 
         return text
 
@@ -22,9 +19,19 @@ def fix_text(text):
     m = re.match(r'^(.*?):([A-Z].*)', text)
     if not m:
         return text
+    elif print_spell:
+        print(f'Fixing enumeration in {print_spell}')
     before_colon, after_colon = m.groups()
 
+    # Split using RE_CAPITAL_SPLIT to detect enumerations
     matches = list(filter(None, RE_CAPITAL_SPLIT.split(after_colon)))
+    
+    # Convert to table if we have multiple enumeration items
+    if len(matches) > 1:
+        table_rows = ''.join(f'<tr><td>- {match.strip()}</td></tr>' for match in matches[:-1])
+        return before_colon + ':<table>' + table_rows + '</table>' + matches[-1]
+    
+    # Original formatting for other cases
     processed = []
     for i, segment in enumerate(matches):
         if i != len(matches) - 1:
@@ -34,7 +41,6 @@ def fix_text(text):
             segment += '; '
         processed.append(segment)
     return before_colon + ': ' + ''.join(processed)
-
 
 def sanitize_html(text):
     """Ensure HTML tags are properly balanced and formatted."""
@@ -214,6 +220,7 @@ def apply_phrase_shorthands(text):
         r'\badvantage\b': 'adv.',
         r'\bdisadvantage\b': 'disadv.',
         r'\bcritical hit\b': 'crit',
+        r'__INSET_0__': '',
     }
     
     for pattern, replacement in PHRASE_SHORTHANDS.items():
