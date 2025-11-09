@@ -1,3 +1,4 @@
-data/
+data/*
+!data/Spells-fixed.csv
 out/
 *.cpython*
