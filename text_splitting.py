@@ -1,5 +1,4 @@
 """Improved text splitting with table awareness and multi-card support."""
-import re
 from text_formatting import RE_HTML_TAGS, sanitize_html
 
 

@@ -60,7 +60,8 @@ class WatchHandler(FileSystemEventHandler):
             return
         self.last_run = now
         print(f"\n[change detected] {event.src_path}")
-        subprocess.run([sys.executable, 'generate.py'])
+        subprocess.run([sys.executable, 'generate.py', '-d'])
+        print()
 
 if __name__ == "__main__":
     event_handler = WatchHandler()
