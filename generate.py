@@ -2,7 +2,7 @@
 from pathlib import Path
 from spell_processing import load_spells, merge_spell_duplicates, load_fixed_spells, detect_broken_elements
 from card_generator import generate_spell_card
-import sys, keyboard
+import sys, keyboard, argparse
 
 def load_file(path):
     """Load file content as text."""
@@ -12,7 +12,7 @@ def load_file(path):
 def main():
     base = Path("templates")
     paths = {
-        "csv": Path("Spells-various.csv"),
+        "csv": Path("Spells-many.csv"),
         "fixed_csv": Path("data/Spells-fixed.csv"),
         "css": base / "style.css",
         "page": base / "page.html",
@@ -65,6 +65,33 @@ def main():
     print(f"Exported {len(cards)} cards to {paths['out_html']}")
 
 if __name__ == "__main__":
+    # DEBUG #
+    import os
+    from pathlib import Path
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Script location: {__file__}")
+    
+    if hasattr(sys, '_MEIPASS'):
+        print(f"MEIPASS location: {sys._MEIPASS}")
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).parent
+    
+    print(f"Base path: {base_path}")
+    print(f"templates/style.css exists: {(base_path / 'templates' / 'style.css').exists()}")
+    ##
+
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Spellcard Generator')
+    parser.add_argument('--dev', '-d', action='store_true', 
+                       help='Developer mode: run once and exit (no interactive input)')
+    args = parser.parse_args()
+
+    # If dev mode, run main once and exit
+    if args.dev:
+        main()
+        sys.exit(0)
+
     def user_input():
         print("\nPress ENTER to (re)generate or ESC to exit...", flush=True)
         return keyboard.read_key(suppress=True)
@@ -83,3 +110,9 @@ if __name__ == "__main__":
                 pass
     finally:
         keyboard.unhook_all()
+
+# TODO: fix Tasha's Otherworldly Guise
+# TODO: better contrast damage type colors
+# TODO: better text split
+# TODO: triple split cards
+# TODO: continuous split cards
