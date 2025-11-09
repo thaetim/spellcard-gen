@@ -2,7 +2,7 @@
 from pathlib import Path
 from spell_processing import load_spells, merge_spell_duplicates, load_fixed_spells, detect_broken_elements
 from card_generator import generate_spell_card
-
+import sys, keyboard
 
 def load_file(path):
     """Load file content as text."""
@@ -12,23 +12,20 @@ def load_file(path):
 def main():
     base = Path("templates")
     paths = {
-        "csv": Path("data/Spells-various.csv"),
+        "csv": Path("Spells-various.csv"),
         "fixed_csv": Path("data/Spells-fixed.csv"),
         "css": base / "style.css",
         "page": base / "page.html",
         "card": base / "card.html",
         "card_cont": base / "card-continuation.html",
         "js": base / "autosize.js",
-        "out_html": Path("out/spell_cards.html"),
-        "out_js": Path("out/autosize.js")
+        "out_html": Path("spell_cards.html"),
+        "out_js": Path("autosize.js")
     }
 
     css, page, card, card_cont, js = [
         load_file(p) for p in (paths["css"], paths["page"], paths["card"], paths["card_cont"], paths["js"])
     ]
-
-    # Fix CSS syntax error
-    css = css.replace("display: ver('-webkit-box');", "display: -webkit-box;")
 
     fixed_spells = load_fixed_spells(paths["fixed_csv"])
     spells_df = load_spells(paths["csv"])
@@ -41,7 +38,7 @@ def main():
     def generate_and_track(spell):
         spell_name = spell['Name']
         if spell_name in fixed_spells:
-            print(f"Using fixed data for {spell_name}")
+            # print(f"Using fixed data for {spell_name}")
             spell = fixed_spells[spell_name]
         
         card_html = generate_spell_card(spell, card, card_cont, paired_cards)
@@ -67,6 +64,22 @@ def main():
 
     print(f"Exported {len(cards)} cards to {paths['out_html']}")
 
-
 if __name__ == "__main__":
-    main()
+    def user_input():
+        print("\nPress ENTER to (re)generate or ESC to exit...", flush=True)
+        return keyboard.read_key(suppress=True)
+    try:
+        options = {
+            'enter': main,
+            'esc': lambda: sys.exit(0)
+        }
+    
+        while True:
+            try:
+                options[user_input()]()
+            except KeyboardInterrupt:
+                sys.exit(0)
+            except KeyError as e:
+                pass
+    finally:
+        keyboard.unhook_all()
