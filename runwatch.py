@@ -3,7 +3,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 WATCH_PATHS = [
-    '.',  # Added missing comma here
+    '.',
     'templates/',
     'data/'
 ]
@@ -11,6 +11,10 @@ WATCH_PATHS = [
 # Define the specific files you want to watch in the root folder
 WATCHED_FILES = [
     'generate.py',
+    'card_generator.py',
+    'spell_processing.py',
+    'spell_styling.py',
+    'text_formatting.py',
 ]
 
 class WatchHandler(FileSystemEventHandler):
