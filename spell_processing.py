@@ -1,13 +1,43 @@
 """Spell data processing and text manipulation utilities."""
 import re
 import pandas as pd
-from pathlib import Path
 
 
 # Constants for sampling
-N_SAMPLE_THRESH = 200
+N_SAMPLE_THRESH = 200#00000
 N_SAMPLE = 69
-N_SAMPLE_PHRASES = []
+N_SAMPLE_PHRASES = [
+    "Augury",
+    "Bestow Curse",
+    "Conjure Animals",
+    "Conjure Minor Elementals",
+    "Conjure Woodland Beings",
+    "Contaminated Power",
+    "Control Flames",
+    "Draconic Transformation",
+    "Druid Grove",
+    "Druidcraft",
+    "Feathered Reach",
+    "Fizban's Platinum Shield",
+    "Gust",
+    "Investiture of Flame",
+    "Investiture of Ice",
+    "Investiture of Stone",
+    "Investiture of Wind",
+    "Magic Circle",
+    "Mend Plants",
+    "Mold Earth",
+    "Mordenkainen's Private Sanctum",
+    "Pratfall",
+    "Prestidigitation",
+    "Shape Water",
+    "Swallow Magic",
+    "Tasha's Otherworldly Guise",
+    "Tenser's Transformation",
+    "Thaumaturgy",
+    "Warding Wind",
+    "Wish",
+]
 
 
 def load_spells(csv_path, sample_phrases=None):
@@ -19,7 +49,7 @@ def load_spells(csv_path, sample_phrases=None):
         phrase_mask = pd.Series(False, index=df.index)
         
         for phrase in phrases:
-            text_columns = ['Text', 'At Higher Levels', 'Name', 'Description']
+            text_columns = ['Name'] # ['Text', 'At Higher Levels', 'Name', 'Description']
             for col in text_columns:
                 if col in df.columns:
                     phrase_mask = phrase_mask | df[col].str.contains(phrase, case=False, na=False)
