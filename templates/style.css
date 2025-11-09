@@ -335,37 +335,38 @@ body {
     font-size: 0.9em;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 2pt;
-    border: 1px solid var(--footer-color); /* Ensure table has bottom border */
+    border: 1px solid var(--footer-color);
+    table-layout: auto; /* Allow columns to size based on content */
 }
 
 .card-text th {
     background-color: color-mix(in srgb, var(--footer-color) 10%, transparent);
     color: var(--footer-color);
-    /* font-weight: bold; */
-    /* font-size: 3pt; */
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: 1px solid var(--footer-color);
     padding: 0.3em 0.5em;
-     /* Add some padding for better appearance */
 }
 
 .card-text td {
     text-align: left;
     border: 1px solid var(--footer-color);
-    padding: 0.3em 0.5em; /* Add some padding for better appearance */
+    padding: 0.3em 0.5em;
 }
 
-/* Make first column width fit content */
-.card-text table {
-    table-layout: auto; /* Allow columns to size based on content */
+/* Make first column width fit content - ONLY for multi-column tables */
+.card-text table:not(:only-child) th:first-child,
+.card-text table:not(:only-child) td:first-child {
+    width: 1%;
+    white-space: nowrap;
 }
 
-.card-text th:first-child,
-.card-text td:first-child {
-    width: 1%; /* Force first column to be as small as possible */
-    white-space: nowrap; /* Prevent text wrapping in first column */
+/* Alternative approach using column count detection */
+.card-text table:has(tr > :nth-child(2)) th:first-child,
+.card-text table:has(tr > :nth-child(2)) td:first-child {
+    width: 1%;
+    white-space: nowrap;
 }
 
 /* Ensure bottom border for the entire table */
@@ -374,7 +375,7 @@ body {
 }
 
 .card-text tr:last-child td {
-    border-bottom: 1px solid var(--footer-color); /* Keep bottom border on last row */
+    border-bottom: 1px solid var(--footer-color);
 }
 
 .card-text tr:nth-child(even) {
@@ -385,18 +386,29 @@ body {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Special styling for damage type tables */
-.card-text table:has(th:contains('Damage')) th {
-    background-color: color-mix(in srgb, #8b0000 10%, transparent);
-    color: #000;
+/* Style single column tables without headers */
+.card-text table:not(:has(th)):has(td:only-child),
+.card-text table:not(:has(th)):has(td:first-child:last-child) {
+    border: none;
+    background-color: transparent;
 }
 
-.card-text table:has(th:contains('Level')) th {
-    background-color: color-mix(in srgb, #006400 10%, transparent);
-    color: #000;
+.card-text table:not(:has(th)):has(td:only-child) td,
+.card-text table:not(:has(th)):has(td:first-child:last-child) td {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid color-mix(in srgb, var(--footer-color) 20%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--footer-color) 20%, transparent);
 }
 
-.card-text table:has(th:contains('d')) th {
-    background-color: color-mix(in srgb, #00008b 10%, transparent);
-    color: #000;
+/* Remove top border from first row */
+.card-text table:not(:has(th)):has(td:only-child) tr:first-child td,
+.card-text table:not(:has(th)):has(td:first-child:last-child) tr:first-child td {
+    border-top: none;
+}
+
+/* Remove bottom border from last row (if needed) */
+.card-text table:not(:has(th)):has(td:only-child) tr:last-child td,
+.card-text table:not(:has(th)):has(td:first-child:last-child) tr:last-child td {
+    border-bottom: none;
 }
