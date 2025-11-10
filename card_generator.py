@@ -32,6 +32,7 @@ def parse_duration(duration):
     replacements = {
         'Instantaneous': 'Instant',
         'up to ': '',
+        'Up to ': '',
         'minutes': 'min.',
         'minute': 'min.',
         'hours': 'h',
@@ -39,7 +40,8 @@ def parse_duration(duration):
         'year': 'yr',
         'Until dispelled': 'Permanent',
         '(see below)': '',
-        'Instant or': 'Instant /',
+        # 'Instant or': 'Instant /',
+        'Instant or': 'In. /', # FIXME
         'Concentration': 'Indefinite',
     }
     
@@ -192,7 +194,7 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
     casting_time = casting_time.replace('Min', 'min').replace('Day', 'day').replace('Year', 'year').replace('Hr.', 'h').replace('hours', 'h')
     
     name = spell['Name']
-    casting_label = "Ritual" if is_ritual else "Casting Time"
+    casting_label = "or Ritual" if is_ritual else "Casting Time"
     duration_label = "Concentration" if is_concentration else "Duration"
     
     mapping = {

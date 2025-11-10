@@ -90,14 +90,21 @@ def estimate_text_length(text):
 
 
 def split_spell_text(text, target_length=800):
-    """Split text while preserving HTML tag integrity and not breaking tables."""
+    """Split text while preserving HTML tag integrity and not breaking tables.
+    
+    First card has ~100px less vertical space due to card-attrs table,
+    so it needs LESS text to fill properly. Split at 36% to balance density.
+    """
     if estimate_text_length(text) < target_length:
         return sanitize_html(text), None
 
     text = sanitize_html(text)
     clean_text = RE_HTML_TAGS.sub('', text)
     total_len = len(clean_text)
-    target_pos = int(total_len * 0.35)
+    # ADJUST THIS: First card gets 36% of text (has less vertical space)
+    # Lower = less text in first card, Higher = more text in first card
+    # Range: 0.30-0.42 depending on your content
+    target_pos = int(total_len * 0.36)
 
     def find_safe_breakpoint(text, target_clean_pos):
         current_clean_pos = 0

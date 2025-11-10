@@ -113,6 +113,6 @@ if __name__ == "__main__":
 
 # TODO: fix Tasha's Otherworldly Guise
 # TODO: better contrast damage type colors
-# TODO: better text split
+# TODO: better text split and font autosizing (text_splitting.py changes in ratio do not seem to be effective, e.g. Wish spell)
 # TODO: triple split cards
 # TODO: continuous split cards

@@ -15,6 +15,7 @@ WATCHED_FILES = [
     'spell_processing.py',
     'spell_styling.py',
     'text_formatting.py',
+    'text_splitting.py',
 ]
 
 class WatchHandler(FileSystemEventHandler):
