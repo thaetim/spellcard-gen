@@ -357,33 +357,33 @@ body {
 /* ===== CLASS COLORS ===== */
 .class-Wizard {
     --header-color: #3A64A8;
-    --header-bg: url("textures/wizard.png");
+    /* --header-bg: url("textures/wizard.png"); */
     --footer-color: #3A64A8;
-    --footer-bg: url("textures/wizard.png");
+    /* --footer-bg: url("textures/wizard.png"); */
     --card-border: #2A4885;
 }
 
 .class-Warlock {
     --header-color: #502F73;
-    --header-bg: url("textures/warlock.png");
+    /* --header-bg: url("textures/warlock.png"); */
     --footer-color: #502F73;
-    --footer-bg: url("textures/warlock.png");
+    /* --footer-bg: url("textures/warlock.png"); */
     --card-border: #3A2153;
 }
 
 .class-Cleric {
     --header-color: #A07A3A;
-    --header-bg: url("textures/cleric.png");
+    /* --header-bg: url("textures/cleric.png"); */
     --footer-color: #A07A3A;
-    --footer-bg: url("textures/cleric.png");
+    /* --footer-bg: url("textures/cleric.png"); */
     --card-border: #7C5E2C;
 }
 
 .class-Sorcerer {
     --header-color: #A33A3A;
-    --header-bg: url("textures/sorcerer.png");
+    /* --header-bg: url("textures/sorcerer.png"); */
     --footer-color: #A33A3A;
-    --footer-bg: url("textures/sorcerer.png");
+    /* --footer-bg: url("textures/sorcerer.png"); */
     --card-border: #7C2C2C;
 }
 
@@ -396,50 +396,50 @@ body {
 
 .class-Abjuration {
     --base-color: #00b921;
-    --header-bg: url("textures/abjuration.png");
-    --footer-bg: url("textures/abjuration.png");
+    /* --header-bg: url("textures/abjuration.png");
+    --footer-bg: url("textures/abjuration.png"); */
 }
 
 .class-Conjuration {
     --base-color: #bd0044;
-    --header-bg: url("textures/conjuration.png");
-    --footer-bg: url("textures/conjuration.png");
+    /* --header-bg: url("textures/conjuration.png");
+    --footer-bg: url("textures/conjuration.png"); */
 }
 
 .class-Divination {
     --base-color: #00adb3;
-    --header-bg: url("textures/divination.png");
-    --footer-bg: url("textures/divination.png");
+    /* --header-bg: url("textures/divination.png");
+    --footer-bg: url("textures/divination.png"); */
 }
 
 .class-Enchantment {
     --base-color: #b30083;
-    --header-bg: url("textures/enchantment.png");
-    --footer-bg: url("textures/enchantment.png");
+    /* --header-bg: url("textures/enchantment.png");
+    --footer-bg: url("textures/enchantment.png"); */
 }
 
 .class-Evocation {
     --base-color: #bb0100;
-    --header-bg: url("textures/evocation.png");
-    --footer-bg: url("textures/evocation.png");
+    /* --header-bg: url("textures/evocation.png");
+    --footer-bg: url("textures/evocation.png"); */
 }
 
 .class-Illusion {
     --base-color: #006dbd;
-    --header-bg: url("textures/illusion.png");
-    --footer-bg: url("textures/illusion.png");
+    /* --header-bg: url("textures/illusion.png");
+    --footer-bg: url("textures/illusion.png"); */
 }
 
 .class-Necromancy {
     --base-color: #6c00cc;
-    --header-bg: url("textures/necromancy.png");
-    --footer-bg: url("textures/necromancy.png");
+    /* --header-bg: url("textures/necromancy.png");
+    --footer-bg: url("textures/necromancy.png"); */
 }
 
 .class-Transmutation {
     --base-color: #ccbe00;
-    --header-bg: url("textures/transmutation.png");
-    --footer-bg: url("textures/transmutation.png");
+    /* --header-bg: url("textures/transmutation.png");
+    --footer-bg: url("textures/transmutation.png"); */
 }
 
 .class-Abjuration .school-name,
