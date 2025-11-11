@@ -1,12 +1,11 @@
 /* -------------------------------------------------------------
-   Auto‑size card title with smart line breaking
+   Auto-size card title with smart line breaking
    ------------------------------------------------------------- */
 function autoSizeCardTitle() {
     const cards = document.querySelectorAll('.card-single, .card-wide');
     const breakWords = ['\nof', ' of ', ' and ', ' or ', ' at ', ' to ', ' in ', ' the '];
     
-    // Pre-calculate reusable values
-    const minSize = 15;
+    const minSize = 15; // px
     const lineHeight = '1.1';
     const overflow = 'hidden';
 
@@ -16,14 +15,10 @@ function autoSizeCardTitle() {
 
         const originalText = title.textContent;
         let fontSize = 17;
-        
-        // Batch style changes to minimize reflows
-        title.style.cssText = `font-size: ${fontSize}pt; line-height: ${lineHeight}; overflow: ${overflow};`;
-        
-        // Single forced layout
+
+        title.style.cssText = `font-size: ${fontSize}px; line-height: ${lineHeight}; overflow: ${overflow};`;
         const titleRect = title.getBoundingClientRect();
-        
-        // Optimized multiline check with cached measurements
+
         const isMultiline = (() => {
             const origWS = title.style.whiteSpace;
             title.style.whiteSpace = 'nowrap';
@@ -34,8 +29,7 @@ function autoSizeCardTitle() {
         })();
 
         let multiline = isMultiline;
-        
-        // Smart line breaking optimization
+
         if (multiline && fontSize === 17) {
             let bestBreak = null;
             let bestScore = Infinity;
@@ -47,7 +41,6 @@ function autoSizeCardTitle() {
                     ? breakWord.substring(1) 
                     : breakWord;
                 const idx = textLower.indexOf(searchText);
-                
                 if (idx > 0) {
                     const score = Math.abs((idx + searchText.length / 2) - mid);
                     if (score < bestScore) {
@@ -56,7 +49,6 @@ function autoSizeCardTitle() {
                     }
                 }
             }
-            
             if (bestBreak) {
                 title.innerHTML = originalText.substring(0, bestBreak).trim() + '<br>' + 
                                  originalText.substring(bestBreak).trim();
@@ -64,17 +56,11 @@ function autoSizeCardTitle() {
             }
         }
 
-        // Optimized font size reduction with binary search approach
         if (multiline && fontSize > minSize) {
-            let low = minSize;
-            let high = fontSize;
-            let optimalSize = minSize;
-            
-            // Binary search for optimal font size
+            let low = minSize, high = fontSize, optimalSize = minSize;
             while (low <= high) {
                 const midSize = (low + high) / 2;
-                title.style.fontSize = midSize + 'pt';
-                
+                title.style.fontSize = midSize + 'px';
                 if (title.scrollHeight <= titleRect.height * 1.5) {
                     optimalSize = midSize;
                     low = midSize + 0.1;
@@ -82,178 +68,229 @@ function autoSizeCardTitle() {
                     high = midSize - 0.1;
                 }
             }
-            
-            title.style.fontSize = optimalSize + 'pt';
+            title.style.fontSize = optimalSize + 'px';
         }
     });
 }
 
 /* -------------------------------------------------------------
-   Calculate optimal font size for a card's text
+   Diagnostic font stats storage
    ------------------------------------------------------------- */
-function calculateOptimalFontSize(card, textEl, containerEl, header, footer, attrs, attrInfo, isWideCard = false) {
-    const minSize = 6;      // bump up safety min
-    const maxSize = 10;
-    let fontSize = 9;
+const cardTypeStats = {
+  single: [],
+  double: [],
+  triple: []
+};
 
-    const lineHeightFor = size => {
-        const maxSizeL = 15, minSizeL = 4;
-        const maxLH = 1.2, minLH = 0.9;
-        const t = (size - minSizeL) / (maxSizeL - minSizeL);
-        return minLH + t * (maxLH - minLH);
-    };
+function logCardTypeStats() {
+  Object.entries(cardTypeStats).forEach(([type, arr]) => {
+    if (arr.length === 0) return;
+    const min = Math.min(...arr.map(a => a.font));
+    const max = Math.max(...arr.map(a => a.font));
+    const avg = arr.reduce((s, a) => s + a.font, 0) / arr.length;
 
-    // Reset to baseline before measuring
-    textEl.style.cssText = `font-size: ${fontSize}pt; line-height: ${lineHeightFor(fontSize)}; white-space: normal;`;
-
-    const cardRect = card.getBoundingClientRect();
-    const containerRect = containerEl.getBoundingClientRect();
-    const headerH = header?.getBoundingClientRect().height || 0;
-    const footerH = footer?.getBoundingClientRect().height || 0;
-    const attrsH = attrs?.getBoundingClientRect().height || 0;
-    const attrInfoH = attrInfo?.getBoundingClientRect().height || 0;
-
-    // Defensive height computation
-    let availableHeight = containerRect.height - attrsH - attrInfoH;
-    if (!isWideCard) availableHeight -= (parseFloat(getComputedStyle(containerEl).paddingTop) || 0)
-                                       + (parseFloat(getComputedStyle(containerEl).paddingBottom) || 0);
-    availableHeight -= 6; // safety margin
-
-    // Fallback: if layout not ready (zero/invalid)
-    if (availableHeight < 80 || !Number.isFinite(availableHeight)) {
-        console.warn('Layout not ready, retrying later...', availableHeight);
-        setTimeout(() => calculateOptimalFontSize(card, textEl, containerEl, header, footer, attrs, attrInfo, isWideCard), 500);
-        return fontSize;
-    }
-
-    const effectiveHeight = isWideCard ? availableHeight * 0.85 : availableHeight;
-
-    // Early exit: if text already fits comfortably, skip binary shrink
-    if (textEl.scrollHeight <= effectiveHeight * 0.95) {
-        // restore baseline if too small
-        textEl.style.fontSize = fontSize + 'pt';
-        return fontSize;
-    }
-
-    // Binary search shrinker
-    let low = minSize, high = maxSize, optimal = fontSize;
-    while (low <= high && Math.abs(high - low) > 0.05) {
-        const mid = (low + high) / 2;
-        const lh = lineHeightFor(mid);
-        textEl.style.cssText = `font-size: ${mid}pt; line-height: ${lh}; white-space: normal;`;
-        if (textEl.scrollHeight <= effectiveHeight) {
-            optimal = mid;
-            low = mid + 0.05;
-        } else {
-            high = mid - 0.05;
-        }
-    }
-
-    // Final clamp and style
-    optimal = Math.max(minSize, Math.min(maxSize, optimal));
-    const finalLH = lineHeightFor(optimal);
-    textEl.style.cssText = `font-size: ${optimal}pt; line-height: ${finalLH}; white-space: normal;`;
-
-    console.log(`Card: ${card.className}, Final font: ${optimal.toFixed(2)}pt, avail=${availableHeight.toFixed(1)}px, used=${textEl.scrollHeight.toFixed(1)}px`);
-    return optimal;
+    console.group(`Font stats for ${type} cards`);
+    console.log(`count=${arr.length}, min=${min.toFixed(2)}px, avg=${avg.toFixed(2)}px, max=${max.toFixed(2)}px`);
+    const minCase = arr.find(a => a.font === min);
+    const maxCase = arr.find(a => a.font === max);
+    if (minCase) console.log('→ MIN case:', minCase.debug);
+    if (maxCase) console.log('→ MAX case:', maxCase.debug);
+    console.groupEnd();
+  });
 }
 
 /* -------------------------------------------------------------
-   Enhanced auto‑size for the description text
+   Calculate optimal font size for card text (px units)
    ------------------------------------------------------------- */
-function autoSizeCardText() {
-    // Process single cards
-    const singleCards = document.querySelectorAll('.card-single');
-    singleCards.forEach(card => {
-        const textEl = card.querySelector('.card-text');
-        const bodyEl = card.querySelector('.card-body');
-        if (!textEl || !bodyEl) return;
-        
-        const header = card.querySelector('.card-header');
-        const footer = card.querySelector('.card-footer');
-        const attrs = bodyEl.querySelector('.card-attrs');
-        const attrInfo = bodyEl.querySelector('.card-attr-info');
-        
-        calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, attrInfo, false);
-    });
-    
-    // Process wide cards
-    const wideCards = document.querySelectorAll('.card-wide');
-    wideCards.forEach(card => {
-        const isDouble = card.classList.contains('card-wide-2');
-        const isTriple = card.classList.contains('card-wide-3');
-        
-        if (isDouble || isTriple) {
-            const contentEl = card.querySelector('.card-content');
-            const textEl = contentEl.querySelector('.card-text');
-            if (!textEl) return;
-            
-            const header = card.querySelector('.card-header-group');
-            const footer = card.querySelector('.card-footer-group');
-            const attrs = contentEl.querySelector('.card-attrs');
-            const attrInfo = contentEl.querySelector('.card-attr-info');
-            
-            calculateOptimalFontSize(card, textEl, contentEl, header, footer, attrs, attrInfo, true);
-        }
-    });
+function calculateOptimalFontSizePx(card, textEl, containerEl, header, footer, attrs, attrInfo, isWideCard = false) {
+  const minSize = 8;
+  const maxSize = 13;
+  let fontSize = 11;
+
+  const lineHeightFor = size => 1.05 + (size - minSize) * 0.015;
+
+  textEl.style.fontSize = `${fontSize}px`;
+  textEl.style.lineHeight = lineHeightFor(fontSize);
+  textEl.style.whiteSpace = 'normal';
+
+  const containerRect = containerEl.getBoundingClientRect();
+  const headerH = header?.getBoundingClientRect().height || 0;
+  const footerH = footer?.getBoundingClientRect().height || 0;
+  const attrsH = attrs?.getBoundingClientRect().height || 0;
+  const attrInfoH = attrInfo?.getBoundingClientRect().height || 0;
+
+  let availableHeight = containerRect.height - headerH - footerH - attrsH - attrInfoH;
+  const style = getComputedStyle(containerEl);
+  availableHeight -= (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+  availableHeight = Math.max(availableHeight - 2, 0);
+  const effectiveHeight = isWideCard ? availableHeight * 0.85 : availableHeight;
+
+  // binary search shrink if overflow
+  let low = minSize, high = fontSize, optimal = fontSize;
+  let iter = 0;
+  while (low <= high && iter < 40) {
+    const mid = (low + high) / 2;
+    textEl.style.fontSize = `${mid}px`;
+    textEl.style.lineHeight = lineHeightFor(mid);
+    if (textEl.scrollHeight <= effectiveHeight) {
+      optimal = mid;
+      low = mid + 0.1;
+    } else {
+      high = mid - 0.1;
+    }
+    iter++;
+  }
+
+  if (optimal < minSize + 0.5 && textEl.scrollHeight < effectiveHeight * 0.9)
+    optimal = minSize + 0.5;
+
+  textEl.style.fontSize = `${optimal}px`;
+  textEl.style.lineHeight = lineHeightFor(optimal);
+
+  const debugInfo = {
+    font: optimal,
+    effectiveHeight: effectiveHeight.toFixed(1),
+    attrsH: attrsH.toFixed(1),
+    attrInfoH: attrInfoH.toFixed(1),
+    scrollH: textEl.scrollHeight,
+    clientH: containerRect.height
+  };
+
+  const type =
+    card.classList.contains('card-wide-3') ? 'triple' :
+    card.classList.contains('card-wide-2') ? 'double' :
+    'single';
+  cardTypeStats[type].push({ font: optimal, debug: debugInfo });
+
+  return optimal;
 }
 
 /* -------------------------------------------------------------
-   Optimized layout stability helper
+   Overflow-aware adjustment for fine-tuning
+   ------------------------------------------------------------- */
+function debugAndFixOverflow(selector = ".card-text") {
+  document.querySelectorAll(selector).forEach((el, i) => {
+    const card = el.closest(".card");
+    const rect = el.getBoundingClientRect();
+    const overflow = el.scrollHeight > rect.height + 1 || el.scrollWidth > rect.width + 1;
+
+    console.group(`Overflow check ${i}: ${card?.className || '(no card)'}`);
+    console.log(`scrollH=${el.scrollHeight}, clientH=${rect.height}, scrollW=${el.scrollWidth}, clientW=${rect.width}`);
+    console.log(`Overflow? ${overflow}`);
+
+    if (overflow) {
+      let size = parseFloat(window.getComputedStyle(el).fontSize);
+      let safety = 0;
+      while ((el.scrollHeight > rect.height || el.scrollWidth > rect.width) && size > 7 && safety < 50) {
+        size -= 0.2;
+        el.style.fontSize = `${size}px`;
+        safety++;
+      }
+      console.log(`Fixed overflow: new font=${size.toFixed(2)}px`);
+    } else {
+      let size = parseFloat(window.getComputedStyle(el).fontSize);
+      let safety = 0;
+      while (el.scrollHeight < rect.height * 0.75 && size < 12 && safety < 50) {
+        size += 0.2;
+        el.style.fontSize = `${size}px`;
+        safety++;
+      }
+      console.log(`Adjusted spacing: final font=${size.toFixed(2)}px`);
+    }
+    console.groupEnd();
+  });
+}
+
+/* -------------------------------------------------------------
+   Auto-size card text (integrated)
+   ------------------------------------------------------------- */
+function autoSizeCardTextDebug() {
+  Object.keys(cardTypeStats).forEach(k => (cardTypeStats[k] = [])); // reset stats
+
+  // single cards
+  document.querySelectorAll('.card-single').forEach(card => {
+    const textEl = card.querySelector('.card-text');
+    const bodyEl = card.querySelector('.card-body');
+    if (!textEl || !bodyEl) return;
+    const header = card.querySelector('.card-header');
+    const footer = card.querySelector('.card-footer');
+    const attrs = bodyEl.querySelector('.card-attrs');
+    const attrInfo = bodyEl.querySelector('.card-attr-info');
+    calculateOptimalFontSizePx(card, textEl, bodyEl, header, footer, attrs, attrInfo, false);
+  });
+
+  // double/triple wide cards
+  document.querySelectorAll('.card-wide').forEach(card => {
+    const contentEl = card.querySelector('.card-content');
+    if (!contentEl) return;
+    const textEl = contentEl.querySelector('.card-text');
+    if (!textEl) return;
+    const header = card.querySelector('.card-header-group');
+    const footer = card.querySelector('.card-footer-group');
+    const attrs = contentEl.querySelector('.card-attrs');
+    const attrInfo = contentEl.querySelector('.card-attr-info');
+    calculateOptimalFontSizePx(card, textEl, contentEl, header, footer, attrs, attrInfo, true);
+  });
+
+  debugAndFixOverflow(".card-text");
+  logCardTypeStats();
+}
+
+/* -------------------------------------------------------------
+   Layout stability helper
    ------------------------------------------------------------- */
 function waitForLayoutStable(callback, interval = 200, stableCount = 3) {
-    let lastSum = 0, stable = 0;
-    const cardTexts = document.querySelectorAll('.card-text');
-    
-    const timer = setInterval(() => {
-        let total = 0;
-        for (let i = 0; i < cardTexts.length; i++) {
-            total += cardTexts[i].scrollHeight;
-        }
-        
-        if (total === lastSum) {
-            stable++;
-            if (stable >= stableCount) {
-                clearInterval(timer);
-                callback();
-            }
-        } else {
-            stable = 0;
-            lastSum = total;
-        }
-    }, interval);
+  let lastSum = 0, stable = 0;
+  const cardTexts = document.querySelectorAll('.card-text');
+
+  const timer = setInterval(() => {
+    let total = 0;
+    for (let i = 0; i < cardTexts.length; i++) total += cardTexts[i].scrollHeight;
+    if (total === lastSum) {
+      stable++;
+      if (stable >= stableCount) {
+        clearInterval(timer);
+        callback();
+      }
+    } else {
+      stable = 0;
+      lastSum = total;
+    }
+  }, interval);
 }
 
 /* -------------------------------------------------------------
-   Throttled resize handler
+   Throttle helper
    ------------------------------------------------------------- */
 function throttle(func, limit) {
-    let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-            func.apply(context, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
+  let inThrottle;
+  return function() {
+    const args = arguments;
+    const context = this;
+    if (!inThrottle) {
+      func.apply(context, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
     }
+  };
 }
 
 /* -------------------------------------------------------------
-   Run everything on load, on resize, and after layout stabilises
+   Main auto-size sequence
    ------------------------------------------------------------- */
 const autoSizeAll = throttle(() => {
-    autoSizeCardTitle();
-    autoSizeCardText();
+  autoSizeCardTitle();
+  autoSizeCardTextDebug();
 }, 100);
 
 document.addEventListener('DOMContentLoaded', () => {
+  autoSizeAll();
+  waitForLayoutStable(() => {
+    console.log('Layout stabilized — final sizing pass');
     autoSizeAll();
-    waitForLayoutStable(() => {
-        console.log('Layout stabilized — final autoSizeAll()');
-        autoSizeAll();
-    });
+  });
+  const mo = new MutationObserver(() => debugAndFixOverflow(".card-text"));
+  mo.observe(document.body, { childList: true, subtree: true });
 });
 
 window.addEventListener('resize', autoSizeAll);
