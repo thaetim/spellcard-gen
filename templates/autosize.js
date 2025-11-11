@@ -2,7 +2,7 @@
    Auto‑size card title with smart line breaking
    ------------------------------------------------------------- */
 function autoSizeCardTitle() {
-    const cards = document.querySelectorAll('.card');
+    const cards = document.querySelectorAll('.card-single, .card-wide');
     const breakWords = ['\nof', ' of ', ' and ', ' or ', ' at ', ' to ', ' in ', ' the '];
     
     // Pre-calculate reusable values
@@ -11,7 +11,7 @@ function autoSizeCardTitle() {
     const overflow = 'hidden';
 
     cards.forEach(card => {
-        const title = card.querySelector('.card-title');
+        const title = card.querySelector('.card-header .card-title');
         if (!title) return;
 
         const originalText = title.textContent;
@@ -91,10 +91,13 @@ function autoSizeCardTitle() {
 /* -------------------------------------------------------------
    Calculate optimal font size for a card's text
    ------------------------------------------------------------- */
-function calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, attrInfo, isContinuation) {
+function calculateOptimalFontSize(card, textEl, containerEl, header, footer, attrs, attrInfo, isWideCard = false) {
     const minSize = 4;
     const maxSize = 10;
     let fontSize = 9;
+    
+    // Configurable additional size modifier (set to 0 for no additional modification)
+    const additionalSizeModifier = 0;
     
     // Pre-calculate line height function
     const lineHeightFor = size => {
@@ -112,26 +115,36 @@ function calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, a
     // Single measurement pass for all heights
     const cardHeight = card.offsetHeight;
     const headerH = header ? header.offsetHeight : 0;
-    const footerH = footer ? footer.offsetHeight + 1 : 0;
+    const footerH = footer ? footer.offsetHeight : 0;
     const attrsH = attrs ? attrs.offsetHeight : 0;
     const attrInfoH = attrInfo ? attrInfo.offsetHeight : 0;
-    const bodyPad = isContinuation ? 5 : 4;
-    const textMargin = 3;
-    const safetyMargin = 2;
     
-    const availableHeight = cardHeight - headerH - footerH - attrsH - attrInfoH - bodyPad - textMargin - 5 - safetyMargin;
+    // Account for container padding more accurately
+    const containerStyle = window.getComputedStyle(containerEl);
+    const containerPadTop = parseFloat(containerStyle.paddingTop) || 0;
+    const containerPadBottom = parseFloat(containerStyle.paddingBottom) || 0;
+    const containerPadding = containerPadTop + containerPadBottom;
+    
+    // Additional safety margin to prevent overflow
+    const safetyMargin = 1;
+    
+    const availableHeight = cardHeight - headerH - footerH - attrsH - attrInfoH - containerPadding - safetyMargin;
+    
+    // For wide cards with multi-column layout, account for column balancing
+    // Multi-column layouts often need more headroom due to balancing algorithms
+    const effectiveAvailableHeight = isWideCard ? availableHeight * 0.95 : availableHeight * 0.95;
     
     // Optimized size adjustment with binary search
     let low = minSize;
     let high = maxSize;
-    let optimalSize = fontSize;
+    let optimalSize = minSize;
     
     while (low <= high && Math.abs(high - low) > 0.05) {
         const midSize = (low + high) / 2;
         const currentLineHeight = lineHeightFor(midSize);
         textEl.style.cssText = `font-size: ${midSize}pt; line-height: ${currentLineHeight};`;
         
-        if (textEl.scrollHeight <= availableHeight) {
+        if (textEl.scrollHeight <= effectiveAvailableHeight) {
             optimalSize = midSize;
             low = midSize + 0.05;
         } else {
@@ -139,9 +152,15 @@ function calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, a
         }
     }
     
+    // Apply additional size modifier
+    optimalSize = Math.max(minSize, optimalSize + additionalSizeModifier);
+    
     // Apply final optimal size
     const finalLineHeight = lineHeightFor(optimalSize);
     textEl.style.cssText = `font-size: ${optimalSize}pt; line-height: ${finalLineHeight};`;
+    
+    // Debug logging (remove in production)
+    console.log(`Card: ${card.className}, Font: ${optimalSize.toFixed(2)}pt, Available: ${availableHeight.toFixed(1)}px, Used: ${textEl.scrollHeight.toFixed(1)}px`);
     
     return optimalSize;
 }
@@ -150,61 +169,9 @@ function calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, a
    Enhanced auto‑size for the description text
    ------------------------------------------------------------- */
 function autoSizeCardText() {
-    const cards = document.querySelectorAll('.card');
-    const cardPairs = new Map();
-    
-    // Single pass to group cards (including wide cards)
-    cards.forEach(card => {
-        const cardId = card.id;
-        if (!cardId) return;
-        
-        // Handle wide cards (card-wide-first + card-wide-cont)
-        if (card.classList.contains('card-wide-first')) {
-            const baseId = cardId;
-            const cont2 = document.getElementById(`${baseId}-cont2`);
-            const cont3 = document.getElementById(`${baseId}-cont3`);
-            
-            if (cont3) {
-                processWideCardTriple(card, cont2, cont3);
-            } else if (cont2) {
-                processWideCardDouble(card, cont2);
-            }
-            return;
-        }
-        
-        // Skip if already processed as part of wide card
-        if (card.classList.contains('card-wide-cont')) return;
-        
-        const isContinuation = cardId.endsWith('-cont');
-        const baseId = isContinuation ? cardId.replace('-cont', '') : cardId;
-        
-        if (!cardPairs.has(baseId)) {
-            cardPairs.set(baseId, { original: null, continuation: null });
-        }
-        
-        const pair = cardPairs.get(baseId);
-        if (isContinuation) {
-            pair.continuation = card;
-        } else {
-            pair.original = card;
-        }
-    });
-    
-    // Process pairs with cached queries
-    cardPairs.forEach((pair, baseId) => {
-        const { original, continuation } = pair;
-        
-        if (!continuation && original) {
-            processSingleCard(original, false);
-            return;
-        }
-        
-        if (original && continuation) {
-            processCardPair(original, continuation);
-        }
-    });
-    
-    function processSingleCard(card, isContinuation) {
+    // Process single cards
+    const singleCards = document.querySelectorAll('.card-single');
+    singleCards.forEach(card => {
         const textEl = card.querySelector('.card-text');
         const bodyEl = card.querySelector('.card-body');
         if (!textEl || !bodyEl) return;
@@ -214,106 +181,28 @@ function autoSizeCardText() {
         const attrs = bodyEl.querySelector('.card-attrs');
         const attrInfo = bodyEl.querySelector('.card-attr-info');
         
-        calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, attrInfo, isContinuation);
-    }
+        calculateOptimalFontSize(card, textEl, bodyEl, header, footer, attrs, attrInfo, false);
+    });
     
-    function processCardPair(original, continuation) {
-        const origTextEl = original.querySelector('.card-text');
-        const origBodyEl = original.querySelector('.card-body');
-        const contTextEl = continuation.querySelector('.card-text');
-        const contBodyEl = continuation.querySelector('.card-body');
+    // Process wide cards
+    const wideCards = document.querySelectorAll('.card-wide');
+    wideCards.forEach(card => {
+        const isDouble = card.classList.contains('card-wide-2');
+        const isTriple = card.classList.contains('card-wide-3');
         
-        if (!origTextEl || !origBodyEl || !contTextEl || !contBodyEl) return;
-        
-        // Single query for all elements
-        const origHeader = original.querySelector('.card-header');
-        const origFooter = original.querySelector('.card-footer');
-        const origAttrs = origBodyEl.querySelector('.card-attrs');
-        const origAttrInfo = origBodyEl.querySelector('.card-attr-info');
-        
-        const contHeader = continuation.querySelector('.card-header');
-        const contFooter = continuation.querySelector('.card-footer');
-        const contAttrs = contBodyEl.querySelector('.card-attrs');
-        const contAttrInfo = contBodyEl.querySelector('.card-attr-info');
-        
-        // Helper function for line height calculation
-        const lineHeightFor = size => {
-            const maxSizeL = 15;
-            const minSizeL = 4;
-            const maxLH = 1.2, minLH = 0.9;
-            const t = (size - minSizeL) / (maxSizeL - minSizeL);
-            return minLH + t * (maxLH - minLH);
-        };
-        
-        const origSize = calculateOptimalFontSize(
-            original, origTextEl, origBodyEl, origHeader, origFooter, origAttrs, origAttrInfo, false
-        );
-        
-        const contSize = calculateOptimalFontSize(
-            continuation, contTextEl, contBodyEl, contHeader, contFooter, contAttrs, contAttrInfo, true
-        );
-        
-        const finalSize = Math.min(origSize, contSize);
-        const finalLineHeight = lineHeightFor(finalSize);
-        
-        // Batch style updates
-        origTextEl.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
-        contTextEl.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
-    }
-    
-    
-    function processWideCardDouble(card1, card2) {
-        const text1 = card1.querySelector('.card-text');
-        if (!text1) return;
-        
-        const body1 = card1.querySelector('.card-body');
-        
-        // Helper function for line height calculation
-        const lineHeightFor = size => {
-            const maxSizeL = 15;
-            const minSizeL = 4;
-            const maxLH = 1.2, minLH = 0.9;
-            const t = (size - minSizeL) / (maxSizeL - minSizeL);
-            return minLH + t * (maxLH - minLH);
-        };
-        
-        // For wide cards, all text is in the first card split into columns
-        // We need to account for the total height being spread across 2 columns
-        const size1 = calculateOptimalFontSize(card1, text1, body1, 
-            card1.querySelector('.card-header'),
-            card1.querySelector('.card-footer'),
-            body1.querySelector('.card-attrs'),
-            body1.querySelector('.card-attr-info'), false);
-        
-        const finalLineHeight = lineHeightFor(size1);
-        text1.style.cssText = `font-size: ${size1}pt; line-height: ${finalLineHeight};`;
-    }
-    
-    function processWideCardTriple(card1, card2, card3) {
-        const text1 = card1.querySelector('.card-text');
-        if (!text1) return;
-        
-        const body1 = card1.querySelector('.card-body');
-        
-        // Helper function for line height calculation
-        const lineHeightFor = size => {
-            const maxSizeL = 15;
-            const minSizeL = 4;
-            const maxLH = 1.2, minLH = 0.9;
-            const t = (size - minSizeL) / (maxSizeL - minSizeL);
-            return minLH + t * (maxLH - minLH);
-        };
-        
-        // For triple-wide cards, all text is in the first card split into 3 columns
-        const size1 = calculateOptimalFontSize(card1, text1, body1,
-            card1.querySelector('.card-header'),
-            card1.querySelector('.card-footer'),
-            body1.querySelector('.card-attrs'),
-            body1.querySelector('.card-attr-info'), false);
-        
-        const finalLineHeight = lineHeightFor(size1);
-        text1.style.cssText = `font-size: ${size1}pt; line-height: ${finalLineHeight};`;
-    }
+        if (isDouble || isTriple) {
+            const contentEl = card.querySelector('.card-content');
+            const textEl = contentEl.querySelector('.card-text');
+            if (!textEl) return;
+            
+            const header = card.querySelector('.card-header-group');
+            const footer = card.querySelector('.card-footer-group');
+            const attrs = contentEl.querySelector('.card-attrs');
+            const attrInfo = contentEl.querySelector('.card-attr-info');
+            
+            calculateOptimalFontSize(card, textEl, contentEl, header, footer, attrs, attrInfo, true);
+        }
+    });
 }
 
 /* -------------------------------------------------------------

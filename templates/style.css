@@ -89,7 +89,7 @@ body {
 .card-single .card-body,
 .card-content {
     flex: 1;
-    padding: 5pt;
+    padding: 3pt;
     font-family: "Helvetica Neue", Tahoma, Arial, sans-serif;
     font-size: 9pt;
     color: #000;
@@ -172,6 +172,7 @@ body {
     font-size: 8pt;
     align-content: center;
     text-align: center;
+    margin-top: -8px;
 }
 
 .card-attrs td {
