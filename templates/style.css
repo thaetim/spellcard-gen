@@ -74,6 +74,59 @@ body {
     z-index: 2;
 }
 
+/* Multi-column text flow for wide cards */
+.card-group .card-wide-first .card-body {
+    position: relative;
+    overflow: visible;
+    z-index: 10; /* Higher than continuation cards so text flows over them */
+}
+
+/* Continuation card bodies should not block the flowing text */
+.card-group .card-wide-cont .card-body {
+    position: relative;
+    z-index: 1; /* Lower than first card */
+    background: transparent; /* Don't block the text */
+    pointer-events: none; /* Allow interaction with text below */
+}
+
+/* Remove line clamping and display constraints for wide cards */
+.card-group .card-wide-first .card-text {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+}
+
+.card-group-2 .card-wide-first .card-text {
+    position: absolute;
+    left: 5pt; /* Match body padding */
+    right: auto;
+    column-count: 2;
+    column-gap: 10pt; /* Gap between columns = right padding of card1 + left padding of card2 */
+    column-fill: balance;
+    width: calc(58mm * 2 - 10pt); /* Total width spanning both cards minus left padding */
+}
+
+.card-group-3 .card-wide-first .card-text {
+    position: absolute;
+    left: 5pt;
+    right: auto;
+    column-count: 3;
+    column-gap: 10pt; /* Padding between each card */
+    column-fill: balance;
+    width: calc(58mm * 3 - 10pt); /* Total width spanning all three cards minus left padding */
+}
+
+/* Hide continuation card text since first card handles all text */
+.card-wide-cont .card-text {
+    display: none;
+}
+
+/* Ensure card bodies don't clip the overflowing text */
+.card-group .card {
+    overflow: visible !important;
+}
+
 .card-header {
     background: var(--header-color, #304A90);
     background-image: var(--header-bg, none);

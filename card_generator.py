@@ -225,15 +225,17 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
 
     # Decide card type based on number of parts
     if text_part3 and card_wide_3_template:
-        # Use triple-wide card (3 adjacent cards)
+        # Use triple-wide card (3 adjacent cards) - all text in first card
         wide_mapping = mapping.copy()
-        wide_mapping["TEXT_PART2"] = text_part2
-        wide_mapping["TEXT_PART3"] = text_part3
+        wide_mapping["TEXT"] = text  # Put ALL text in first card
+        wide_mapping["TEXT_PART2"] = ""  # Empty continuation cards
+        wide_mapping["TEXT_PART3"] = ""
         return replace_placeholders(card_wide_3_template, wide_mapping)
     elif text_part2 and card_wide_2_template:
-        # Use double-wide card (2 adjacent cards)
+        # Use double-wide card (2 adjacent cards) - all text in first card  
         wide_mapping = mapping.copy()
-        wide_mapping["TEXT_PART2"] = text_part2
+        wide_mapping["TEXT"] = text  # Put ALL text in first card
+        wide_mapping["TEXT_PART2"] = ""  # Empty continuation card
         return replace_placeholders(card_wide_2_template, wide_mapping)
     elif text_part2 and continuation_template:
         # Use vertical continuation cards (legacy)

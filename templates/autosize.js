@@ -264,11 +264,9 @@ function autoSizeCardText() {
     
     function processWideCardDouble(card1, card2) {
         const text1 = card1.querySelector('.card-text');
-        const text2 = card2.querySelector('.card-text');
-        if (!text1 || !text2) return;
+        if (!text1) return;
         
         const body1 = card1.querySelector('.card-body');
-        const body2 = card2.querySelector('.card-body');
         
         // Helper function for line height calculation
         const lineHeightFor = size => {
@@ -279,33 +277,23 @@ function autoSizeCardText() {
             return minLH + t * (maxLH - minLH);
         };
         
+        // For wide cards, all text is in the first card split into columns
+        // We need to account for the total height being spread across 2 columns
         const size1 = calculateOptimalFontSize(card1, text1, body1, 
             card1.querySelector('.card-header'),
             card1.querySelector('.card-footer'),
             body1.querySelector('.card-attrs'),
             body1.querySelector('.card-attr-info'), false);
         
-        const size2 = calculateOptimalFontSize(card2, text2, body2,
-            card2.querySelector('.card-header'),
-            card2.querySelector('.card-footer'),
-            null, null, true);
-        
-        const finalSize = Math.min(size1, size2);
-        const finalLineHeight = lineHeightFor(finalSize);
-        
-        text1.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
-        text2.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
+        const finalLineHeight = lineHeightFor(size1);
+        text1.style.cssText = `font-size: ${size1}pt; line-height: ${finalLineHeight};`;
     }
     
     function processWideCardTriple(card1, card2, card3) {
         const text1 = card1.querySelector('.card-text');
-        const text2 = card2.querySelector('.card-text');
-        const text3 = card3.querySelector('.card-text');
-        if (!text1 || !text2 || !text3) return;
+        if (!text1) return;
         
         const body1 = card1.querySelector('.card-body');
-        const body2 = card2.querySelector('.card-body');
-        const body3 = card3.querySelector('.card-body');
         
         // Helper function for line height calculation
         const lineHeightFor = size => {
@@ -316,28 +304,15 @@ function autoSizeCardText() {
             return minLH + t * (maxLH - minLH);
         };
         
+        // For triple-wide cards, all text is in the first card split into 3 columns
         const size1 = calculateOptimalFontSize(card1, text1, body1,
             card1.querySelector('.card-header'),
             card1.querySelector('.card-footer'),
             body1.querySelector('.card-attrs'),
             body1.querySelector('.card-attr-info'), false);
         
-        const size2 = calculateOptimalFontSize(card2, text2, body2,
-            card2.querySelector('.card-header'),
-            card2.querySelector('.card-footer'),
-            null, null, true);
-        
-        const size3 = calculateOptimalFontSize(card3, text3, body3,
-            card3.querySelector('.card-header'),
-            card3.querySelector('.card-footer'),
-            null, null, true);
-        
-        const finalSize = Math.min(size1, size2, size3);
-        const finalLineHeight = lineHeightFor(finalSize);
-        
-        text1.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
-        text2.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
-        text3.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
+        const finalLineHeight = lineHeightFor(size1);
+        text1.style.cssText = `font-size: ${size1}pt; line-height: ${finalLineHeight};`;
     }
 }
 
