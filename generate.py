@@ -154,10 +154,5 @@ if __name__ == "__main__":
 # TODO: fix Tasha's Otherworldly Guise text
 # TODO: fix Arcane Lock attr labels overlaps (why do they even happen?)
 # TODO: better contrast damage type colors
-# TODO: better text split and font autosizing (text_splitting.py changes in ratio do not seem to be effective, e.g. Wish spell)
-# TODO: triple split cards
-# TODO: continuous split cards
-# TODO: double and triple cards need to be whole in a single row
 
-# the extended cards (2 sided and 3 sided) NEED to be in a single row - fill the pages with them first and then the single-side cards; the header and footer colors need to continue also in the spaces between the extended cards' sides; the center card in the triple should have neither of the side borders
-# List directory C:\\CODE\\TTRPG\\spellcard-generator; read the files; fix the continuous card logic - the cards still arent continuous in the sense that the background does not connect between the card sides, and the cards seem to connect vertically instead of horizontally
+# maybe rework single card html template to use the same kinds of classes for elements - make the layout structure like in the multicards, just singular - then we can use the selectors more universally in the style.css and in font adjustment script
