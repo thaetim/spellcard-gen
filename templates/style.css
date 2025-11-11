@@ -13,200 +13,177 @@ body {
     align-content: flex-start;
 }
 
-/* Card groups for continuous wide cards */
-.card-group {
-    display: flex;
-    gap: 0;
-    margin: 0;
-    page-break-inside: avoid;
-}
-
-.card-group-2 {
-    width: calc(58mm * 2);
-}
-
-.card-group-3 {
-    width: calc(58mm * 3);
-}
-
-.card {
-    width: 58mm;
-    height: 82mm;
-    box-sizing: border-box;
-    margin: 0;
+/* Wide card container */
+.card-wide {
     display: flex;
     flex-direction: column;
     border: 1pt solid var(--card-border, #000);
     background: #fff;
-    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     page-break-inside: avoid;
+    overflow: hidden;
+}
+
+.card-wide-3 {
+    width: calc(58mm * 3);
+    height: 82mm;
+}
+
+.card-wide-2 {
+    width: calc(58mm * 2);
+    height: 82mm;
+}
+
+/* Single card layout - fixed heights */
+.card-single {
+    width: 58mm;
+    height: 82mm;
+    display: flex;
+    flex-direction: column;
+    border: 1pt solid var(--card-border, #000);
+    background: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: relative;
+    page-break-inside: avoid;
+    overflow: hidden;
 }
 
-/* Connected wide cards - horizontally continuous */
-.card-wide-first {
-    border-right: none;
-}
-
-.card-wide-cont {
-    border-left: none;
-    border-right: none;
-    box-shadow: none;
-}
-
-/* Last card in a wide group gets right border and shadow */
-.card-group-2 .card:last-child,
-.card-group-3 .card:last-child {
-    border-right: 1pt solid var(--card-border, #000);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* First card in wide group gets left shadow */
-.card-group .card:first-child {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* More padding for continuation card text */
-.card-wide-cont .card-body {
-    padding-top: 5pt;
-    position: relative;
-    z-index: 2;
-}
-
-/* Multi-column text flow for wide cards */
-.card-group .card-wide-first .card-body {
-    position: relative;
-    overflow: visible;
-    z-index: 10; /* Higher than continuation cards so text flows over them */
-}
-
-/* Continuation card bodies should not block the flowing text */
-.card-group .card-wide-cont .card-body {
-    position: relative;
-    z-index: 1; /* Lower than first card */
-    background: transparent; /* Don't block the text */
-    pointer-events: none; /* Allow interaction with text below */
-}
-
-/* Remove line clamping and display constraints for wide cards */
-.card-group .card-wide-first .card-text {
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    line-clamp: unset !important;
-    -webkit-box-orient: unset !important;
-}
-
-.card-group-2 .card-wide-first .card-text {
-    position: absolute;
-    left: 5pt; /* Match body padding */
-    right: auto;
-    column-count: 2;
-    column-gap: 10pt; /* Gap between columns = right padding of card1 + left padding of card2 */
-    column-fill: balance;
-    width: calc(58mm * 2 - 10pt); /* Total width spanning both cards minus left padding */
-}
-
-.card-group-3 .card-wide-first .card-text {
-    position: absolute;
-    left: 5pt;
-    right: auto;
-    column-count: 3;
-    column-gap: 10pt; /* Padding between each card */
-    column-fill: balance;
-    width: calc(58mm * 3 - 10pt); /* Total width spanning all three cards minus left padding */
-}
-
-/* Hide continuation card text since first card handles all text */
-.card-wide-cont .card-text {
-    display: none;
-}
-
-/* Ensure card bodies don't clip the overflowing text */
-.card-group .card {
-    overflow: visible !important;
+/* Header group - multiple headers in a row for wide cards */
+.card-header-group {
+    display: flex;
+    height: auto;
 }
 
 .card-header {
+    flex: 1;
     background: var(--header-color, #304A90);
     background-image: var(--header-bg, none);
     background-blend-mode: multiply;
     color: white;
     text-align: center;
-    /* padding: 4pt 3pt 2pt 3pt; */
     font-family: 'Cormorant SC', serif;
     font-weight: 600;
     letter-spacing: 0.3pt;
     font-size: 18pt;
     border-bottom: 1pt solid var(--cell-border, #fff);
-    padding-bottom: 3px;
-    padding-top: 0px;
-    padding-left: 4px;
-    padding-right: 4px;
+    padding: 0 4px 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
-.card-source {
-    font-size: 7pt;
-    opacity: 0.85;
+/* Single card header - normal height */
+.card-single .card-header {
+    padding: 2px 4px 1px; /* Reduced padding */
+    min-height: auto; /* Remove fixed height */
+    height: auto; /* Natural height */
+    flex-shrink: 0; /* Don't shrink */
 }
 
-.card-body {
+/* Wide card headers - specific heights */
+.card-wide .card-header {
+    min-height: 25pt; /* Only for wide cards */
+}
+
+/* Remove borders between headers */
+.card-header + .card-header {
+    border-left: 1pt solid var(--cell-border, #fff);
+}
+
+/* Content area for wide cards */
+.card-content {
     flex: 1;
+    padding: 5pt;
     font-family: "Helvetica Neue", Tahoma, Arial, sans-serif;
     font-size: 9pt;
-    padding-top: 0pt;
-    padding-right: 5pt;
-    padding-bottom: 0px;
-    padding-left: 5pt;
     color: #000;
+    box-sizing: border-box;
+    height: calc(82mm - 50pt - 26pt); /* Total height minus headers and footers */
 }
 
-/* ---------- CSS fallback (works when JS is disabled) ---------- */
-.card-text {
-    /* Font size will grow as large as possible but never exceed 7 pt */
-    font-size: clamp(5pt, 0.9vw, 7pt);
-    /* Line‑height follows the same linear slope as the JS version */
-    line-height: clamp(0.9, 0.15vw + 0.75, 1.2);
-    /* hyphens: auto;
-    word-break: break-word;
-    overflow: hidden; */
-    display: var('-webkit-box');
-    line-clamp: 4;          /* optional max lines – change or remove */
-    -webkit-line-clamp: 4;          /* optional max lines – change or remove */
-    -webkit-box-orient: vertical;
-}
-
-.card-attr-info {
+/* Single card body - full height with proper text flow */
+.card-single .card-body {
+    flex: 1;
+    padding: 4pt 5pt; /* Reduced top/bottom padding */
+    font-family: "Helvetica Neue", Tahoma, Arial, sans-serif;
+    font-size: 9pt;
+    color: #000;
+    box-sizing: border-box;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    overflow: hidden; /* Contain content */
+}
+
+/* Multi-column layout for wide cards */
+.card-columns {
+    column-count: 3;
+    column-width: 48mm;
+    column-gap: 20pt;
+    column-fill: balance;
+    height: 100%;
+}
+
+/* Two-column layout for wide-2 */
+.card-wide-2 .card-columns {
+    column-count: 2;
+    column-width: 48mm;
+    column-gap: 20pt;
+    column-fill: balance;
+    height: 100%;
+}
+
+/* Footer group - multiple footers in a row for wide cards */
+.card-footer-group {
+    display: flex;
+    height: auto;
+}
+
+.card-footer {
+    flex: 1;
+    border-top: 0pt solid var(--cell-border, #fff);
     background: var(--footer-color, #304A90);
     background-image: var(--footer-bg, none);
     background-blend-mode: multiply;
     color: white;
+    font-family: 'Tahoma';
     font-size: 7pt;
-    font-style: italic;
-    padding: 1.5pt;
-    margin: 0 0 3pt 0;
-    border-radius: 2pt;
+    padding: 2pt 3pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
 }
 
-.card-material-components {
-    flex: 1;
-    text-align: left;
-    margin-right: 5pt;
+/* Single card footer - normal height */
+.card-single .card-footer {
+    padding: 1pt 3pt; /* Reduced padding */
+    min-height: auto; /* Remove fixed height */
+    height: auto; /* Natural height */
+    flex-shrink: 0; /* Don't shrink */
 }
 
-.card-duration-info {
-    flex-shrink: 0;
-    text-align: right;
+/* Wide card footers - specific heights */
+.card-wide .card-footer {
+    min-height: 13pt; /* Only for wide cards */
 }
 
+/* Remove borders between footers */
+.card-footer + .card-footer {
+    border-left: 1pt solid var(--cell-border, #fff);
+}
+
+/* Ensure attributes stay in first column */
+.card-attrs,
+.card-attr-info {
+    break-inside: avoid;
+    margin-bottom: 3pt;
+}
+
+/* Attributes styling */
 .card-attrs {
     width: 100%;
     border-collapse: collapse;
     font-size: 8pt;
-    margin-bottom: 3pt;
     align-content: center;
     text-align: center;
 }
@@ -214,7 +191,6 @@ body {
 .card-attrs td {
     position: relative;
     padding: 3pt 3pt 6pt 3pt;
-    /* bottom padding gives room for label */
     text-align: center;
     vertical-align: middle;
     border-bottom: 0.5pt solid #eee;
@@ -224,7 +200,6 @@ body {
 .card-attrs em {
     position: absolute;
     bottom: -1pt;
-    /* snug at the bottom of cell */
     left: 0;
     width: 100%;
     font-style: italic;
@@ -234,7 +209,6 @@ body {
     text-align: center;
     margin: 0;
     pointer-events: none;
-    /* prevent accidental selection overlap */
     display: inline-block;
 }
 
@@ -252,10 +226,10 @@ body {
     padding-bottom: 1pt;
     transform: translateY(1pt);
     border-radius: 1pt;
-    width: auto !important; /* Override the 100% width */
-    left: 50% !important; /* Center horizontally */
-    transform: translateX(-50%) translateY(1pt) !important; /* Adjust transform for centering */
-    white-space: nowrap; /* Prevent text wrapping */
+    width: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(1pt) !important;
+    white-space: nowrap;
 }
 
 .card-attrs td.ritual em {
@@ -271,25 +245,127 @@ body {
     width: 15%;
 }
 
-.card-row {
-    border-bottom: 0.5pt solid #eee;
-    margin-bottom: 1pt;
-}
-
-.card-footer {
-    border-top: 0pt solid var(--cell-border, #fff);
+.card-attr-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: var(--footer-color, #304A90);
     background-image: var(--footer-bg, none);
     background-blend-mode: multiply;
     color: white;
-    font-family: 'Tahoma';
     font-size: 7pt;
-    padding: 2pt 3pt;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    font-style: italic;
+    padding: 1.5pt;
+    border-radius: 2pt;
 }
 
+.card-material-components {
+    flex: 1;
+    text-align: left;
+    margin-right: 5pt;
+}
+
+.card-duration-info {
+    flex-shrink: 0;
+    text-align: right;
+}
+
+/* Card text styling */
+.card-text {
+    line-height: 1.3;
+    break-inside: auto;
+}
+
+/* Single card text - allow scrolling if needed */
+.card-single .card-text {
+    flex: 1;
+    line-height: 1.3;
+    overflow: auto; /* Allow scrolling if content overflows */
+    display: block;
+    max-height: none;
+}
+
+/* Table Styles for Spell Cards */
+.card-text table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5em 0;
+    font-size: 0.9em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 2pt;
+    border: 1px solid var(--footer-color);
+    table-layout: auto;
+    break-inside: avoid;
+}
+
+.card-text th {
+    background-color: color-mix(in srgb, var(--footer-color) 10%, transparent);
+    color: var(--footer-color);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--footer-color);
+    padding: 0.3em 0.5em;
+}
+
+.card-text td {
+    text-align: left;
+    border: 1px solid var(--footer-color);
+    padding: 0.3em 0.5em;
+}
+
+/* Make first column width fit content */
+.card-text table:has(tr > :nth-child(2)) th:first-child,
+.card-text table:has(tr > :nth-child(2)) td:first-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+/* Ensure bottom border for the entire table */
+.card-text table {
+    border-bottom: 1px solid var(--footer-color);
+}
+
+.card-text tr:last-child td {
+    border-bottom: 1px solid var(--footer-color);
+}
+
+.card-text tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.card-text tr:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Style single column tables without headers */
+.card-text table:not(:has(th)):has(td:only-child),
+.card-text table:not(:has(th)):has(td:first-child:last-child) {
+    border: none;
+    background-color: transparent;
+}
+
+.card-text table:not(:has(th)):has(td:only-child) td,
+.card-text table:not(:has(th)):has(td:first-child:last-child) td {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid color-mix(in srgb, var(--footer-color) 20%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--footer-color) 20%, transparent);
+}
+
+/* Remove top border from first row */
+.card-text table:not(:has(th)):has(td:only-child) tr:first-child td,
+.card-text table:not(:has(th)):has(td:first-child:last-child) tr:first-child td {
+    border-top: none;
+}
+
+/* Remove bottom border from last row */
+.card-text table:not(:has(th)):has(td:only-child) tr:last-child td,
+.card-text table:not(:has(th)):has(td:first-child:last-child) tr:last-child td {
+    border-bottom: none;
+}
+
+/* Keep all your existing color definitions for classes and schools */
 .card-footer .school-name {
     background-color: var(--base-color, black);
     color: white;
@@ -306,14 +382,7 @@ body {
     --cell-border: #fff;
 }
 
-/* [class*="class-"] {
-    --header-color: #5b5b5b;;
-    --footer-color: #5b5b5b;;
-    --card-border: #000000;;
-} */
-
 /* COLORS PER CLASS */
-
 .class-Wizard {
     --header-color: #3A64A8;
     --header-bg: url("textures/wizard.png");
@@ -413,102 +482,7 @@ body {
     color: black;
 }
 
-/* Continuation cards - more space for text */
-.card-continuation .card-body {
-    padding-top: 5pt;
-}
-
-.card-continuation .card-text {
-    font-size: 7pt;
-}
-
 .card-class {
     opacity: 0.4;
     color: white;
-}
-
-/* Table Styles for Spell Cards */
-.card-text table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0.5em 0;
-    font-size: 0.9em;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 2pt;
-    border: 1px solid var(--footer-color);
-    table-layout: auto; /* Allow columns to size based on content */
-}
-
-.card-text th {
-    background-color: color-mix(in srgb, var(--footer-color) 10%, transparent);
-    color: var(--footer-color);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: 1px solid var(--footer-color);
-    padding: 0.3em 0.5em;
-}
-
-.card-text td {
-    text-align: left;
-    border: 1px solid var(--footer-color);
-    padding: 0.3em 0.5em;
-}
-
-/* Make first column width fit content - ONLY for multi-column tables */
-.card-text table:not(:only-child) th:first-child,
-.card-text table:not(:only-child) td:first-child {
-    width: 1%;
-    white-space: nowrap;
-}
-
-/* Alternative approach using column count detection */
-.card-text table:has(tr > :nth-child(2)) th:first-child,
-.card-text table:has(tr > :nth-child(2)) td:first-child {
-    width: 1%;
-    white-space: nowrap;
-}
-
-/* Ensure bottom border for the entire table */
-.card-text table {
-    border-bottom: 1px solid var(--footer-color);
-}
-
-.card-text tr:last-child td {
-    border-bottom: 1px solid var(--footer-color);
-}
-
-.card-text tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.card-text tr:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Style single column tables without headers */
-.card-text table:not(:has(th)):has(td:only-child),
-.card-text table:not(:has(th)):has(td:first-child:last-child) {
-    border: none;
-    background-color: transparent;
-}
-
-.card-text table:not(:has(th)):has(td:only-child) td,
-.card-text table:not(:has(th)):has(td:first-child:last-child) td {
-    border-left: none;
-    border-right: none;
-    border-top: 1px solid color-mix(in srgb, var(--footer-color) 20%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--footer-color) 20%, transparent);
-}
-
-/* Remove top border from first row */
-.card-text table:not(:has(th)):has(td:only-child) tr:first-child td,
-.card-text table:not(:has(th)):has(td:first-child:last-child) tr:first-child td {
-    border-top: none;
-}
-
-/* Remove bottom border from last row (if needed) */
-.card-text table:not(:has(th)):has(td:only-child) tr:last-child td,
-.card-text table:not(:has(th)):has(td:first-child:last-child) tr:last-child td {
-    border-bottom: none;
 }
