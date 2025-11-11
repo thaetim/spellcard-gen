@@ -92,77 +92,70 @@ function autoSizeCardTitle() {
    Calculate optimal font size for a card's text
    ------------------------------------------------------------- */
 function calculateOptimalFontSize(card, textEl, containerEl, header, footer, attrs, attrInfo, isWideCard = false) {
-    const minSize = 4;
+    const minSize = 6;      // bump up safety min
     const maxSize = 10;
     let fontSize = 9;
-    
-    // Configurable additional size modifier (set to 0 for no additional modification)
-    const additionalSizeModifier = 0;
-    
-    // Pre-calculate line height function
+
     const lineHeightFor = size => {
-        const maxSizeL = 15;
-        const minSizeL = 4;
+        const maxSizeL = 15, minSizeL = 4;
         const maxLH = 1.2, minLH = 0.9;
         const t = (size - minSizeL) / (maxSizeL - minSizeL);
         return minLH + t * (maxLH - minLH);
     };
-    
-    // Batch style application
-    const lineHeight = lineHeightFor(fontSize);
-    textEl.style.cssText = `font-size: ${fontSize}pt; line-height: ${lineHeight};`;
-    
-    // Single measurement pass for all heights
-    const cardHeight = card.offsetHeight;
-    const headerH = header ? header.offsetHeight : 0;
-    const footerH = footer ? footer.offsetHeight : 0;
-    const attrsH = attrs ? attrs.offsetHeight : 0;
-    const attrInfoH = attrInfo ? attrInfo.offsetHeight : 0;
-    
-    // Account for container padding more accurately
-    const containerStyle = window.getComputedStyle(containerEl);
-    const containerPadTop = parseFloat(containerStyle.paddingTop) || 0;
-    const containerPadBottom = parseFloat(containerStyle.paddingBottom) || 0;
-    const containerPadding = containerPadTop + containerPadBottom;
-    
-    // Additional safety margin to prevent overflow
-    const safetyMargin = 1;
-    
-    const availableHeight = cardHeight - headerH - footerH - attrsH - attrInfoH - containerPadding - safetyMargin;
-    
-    // For wide cards with multi-column layout, account for column balancing
-    // Multi-column layouts often need more headroom due to balancing algorithms
-    const effectiveAvailableHeight = isWideCard ? availableHeight * 0.95 : availableHeight * 0.95;
-    
-    // Optimized size adjustment with binary search
-    let low = minSize;
-    let high = maxSize;
-    let optimalSize = minSize;
-    
+
+    // Reset to baseline before measuring
+    textEl.style.cssText = `font-size: ${fontSize}pt; line-height: ${lineHeightFor(fontSize)}; white-space: normal;`;
+
+    const cardRect = card.getBoundingClientRect();
+    const containerRect = containerEl.getBoundingClientRect();
+    const headerH = header?.getBoundingClientRect().height || 0;
+    const footerH = footer?.getBoundingClientRect().height || 0;
+    const attrsH = attrs?.getBoundingClientRect().height || 0;
+    const attrInfoH = attrInfo?.getBoundingClientRect().height || 0;
+
+    // Defensive height computation
+    let availableHeight = containerRect.height - attrsH - attrInfoH;
+    if (!isWideCard) availableHeight -= (parseFloat(getComputedStyle(containerEl).paddingTop) || 0)
+                                       + (parseFloat(getComputedStyle(containerEl).paddingBottom) || 0);
+    availableHeight -= 6; // safety margin
+
+    // Fallback: if layout not ready (zero/invalid)
+    if (availableHeight < 80 || !Number.isFinite(availableHeight)) {
+        console.warn('Layout not ready, retrying later...', availableHeight);
+        setTimeout(() => calculateOptimalFontSize(card, textEl, containerEl, header, footer, attrs, attrInfo, isWideCard), 500);
+        return fontSize;
+    }
+
+    const effectiveHeight = isWideCard ? availableHeight * 0.85 : availableHeight;
+
+    // Early exit: if text already fits comfortably, skip binary shrink
+    if (textEl.scrollHeight <= effectiveHeight * 0.95) {
+        // restore baseline if too small
+        textEl.style.fontSize = fontSize + 'pt';
+        return fontSize;
+    }
+
+    // Binary search shrinker
+    let low = minSize, high = maxSize, optimal = fontSize;
     while (low <= high && Math.abs(high - low) > 0.05) {
-        const midSize = (low + high) / 2;
-        const currentLineHeight = lineHeightFor(midSize);
-        textEl.style.cssText = `font-size: ${midSize}pt; line-height: ${currentLineHeight};`;
-        
-        if (textEl.scrollHeight <= effectiveAvailableHeight) {
-            optimalSize = midSize;
-            low = midSize + 0.05;
+        const mid = (low + high) / 2;
+        const lh = lineHeightFor(mid);
+        textEl.style.cssText = `font-size: ${mid}pt; line-height: ${lh}; white-space: normal;`;
+        if (textEl.scrollHeight <= effectiveHeight) {
+            optimal = mid;
+            low = mid + 0.05;
         } else {
-            high = midSize - 0.05;
+            high = mid - 0.05;
         }
     }
-    
-    // Apply additional size modifier
-    optimalSize = Math.max(minSize, optimalSize + additionalSizeModifier);
-    
-    // Apply final optimal size
-    const finalLineHeight = lineHeightFor(optimalSize);
-    textEl.style.cssText = `font-size: ${optimalSize}pt; line-height: ${finalLineHeight};`;
-    
-    // Debug logging (remove in production)
-    console.log(`Card: ${card.className}, Font: ${optimalSize.toFixed(2)}pt, Available: ${availableHeight.toFixed(1)}px, Used: ${textEl.scrollHeight.toFixed(1)}px`);
-    
-    return optimalSize;
+
+    // Final clamp and style
+    optimal = Math.max(minSize, Math.min(maxSize, optimal));
+    const finalLH = lineHeightFor(optimal);
+    textEl.style.cssText = `font-size: ${optimal}pt; line-height: ${finalLH}; white-space: normal;`;
+
+    console.log(`Card: ${card.className}, Final font: ${optimal.toFixed(2)}pt, avail=${availableHeight.toFixed(1)}px, used=${textEl.scrollHeight.toFixed(1)}px`);
+    return optimal;
 }
 
 /* -------------------------------------------------------------
