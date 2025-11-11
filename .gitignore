@@ -1,6 +1,7 @@
 *.csv
 !data/Spells-fixed.csv
 *.html
+!templates/*.html
 *.js
 *.exe
 out/
