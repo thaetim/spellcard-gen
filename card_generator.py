@@ -131,8 +131,8 @@ def replace_placeholders(template, mapping):
     return template
 
 
-def generate_spell_card(spell, card_template, continuation_template=None, paired_cards=None):
-    """Generate HTML for a spell card with optional continuation card."""
+def generate_spell_card(spell, card_template, continuation_template=None, paired_cards=None, card_wide_2_template=None, card_wide_3_template=None):
+    """Generate HTML for a spell card with optional continuation or wide cards."""
     card_id = generate_card_id(spell['Name'])
     lvl = spell.get('Level', '')
     school_raw = spell.get('School', '')
@@ -159,7 +159,7 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
     text = text.replace('<br><br>', '<br><span style="display: block; height: 0.5em;"></span>')
     text = fix_broken_line_breaks(text)
     
-    text_part1, text_part2 = split_spell_text(text)
+    text_part1, text_part2, text_part3 = split_spell_text(text)
     
     if text_part1 and text_part2:
         tables_in_part1 = text_part1.count('<table')
@@ -223,9 +223,21 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
         if key not in ["TEXT", "SPELL_TYPE"]:
             mapping[key] = escape(str(value))
 
-    cards = [replace_placeholders(card_template, mapping)]
-    
-    if text_part2 and continuation_template:
+    # Decide card type based on number of parts
+    if text_part3 and card_wide_3_template:
+        # Use triple-wide card (3 adjacent cards)
+        wide_mapping = mapping.copy()
+        wide_mapping["TEXT_PART2"] = text_part2
+        wide_mapping["TEXT_PART3"] = text_part3
+        return replace_placeholders(card_wide_3_template, wide_mapping)
+    elif text_part2 and card_wide_2_template:
+        # Use double-wide card (2 adjacent cards)
+        wide_mapping = mapping.copy()
+        wide_mapping["TEXT_PART2"] = text_part2
+        return replace_placeholders(card_wide_2_template, wide_mapping)
+    elif text_part2 and continuation_template:
+        # Use vertical continuation cards (legacy)
+        cards = [replace_placeholders(card_template, mapping)]
         continuation_mapping = {
             "CARD_ID": card_id,
             "NAME": name,
@@ -241,5 +253,7 @@ def generate_spell_card(spell, card_template, continuation_template=None, paired
                 continuation_mapping[key] = escape(str(value))
                 
         cards.append(replace_placeholders(continuation_template, continuation_mapping))
-    
-    return ''.join(cards)
+        return ''.join(cards)
+    else:
+        # Single card
+        return replace_placeholders(card_template, mapping)

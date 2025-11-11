@@ -153,10 +153,27 @@ function autoSizeCardText() {
     const cards = document.querySelectorAll('.card');
     const cardPairs = new Map();
     
-    // Single pass to group cards
+    // Single pass to group cards (including wide cards)
     cards.forEach(card => {
         const cardId = card.id;
         if (!cardId) return;
+        
+        // Handle wide cards (card-wide-first + card-wide-cont)
+        if (card.classList.contains('card-wide-first')) {
+            const baseId = cardId;
+            const cont2 = document.getElementById(`${baseId}-cont2`);
+            const cont3 = document.getElementById(`${baseId}-cont3`);
+            
+            if (cont3) {
+                processWideCardTriple(card, cont2, cont3);
+            } else if (cont2) {
+                processWideCardDouble(card, cont2);
+            }
+            return;
+        }
+        
+        // Skip if already processed as part of wide card
+        if (card.classList.contains('card-wide-cont')) return;
         
         const isContinuation = cardId.endsWith('-cont');
         const baseId = isContinuation ? cardId.replace('-cont', '') : cardId;
@@ -219,6 +236,15 @@ function autoSizeCardText() {
         const contAttrs = contBodyEl.querySelector('.card-attrs');
         const contAttrInfo = contBodyEl.querySelector('.card-attr-info');
         
+        // Helper function for line height calculation
+        const lineHeightFor = size => {
+            const maxSizeL = 15;
+            const minSizeL = 4;
+            const maxLH = 1.2, minLH = 0.9;
+            const t = (size - minSizeL) / (maxSizeL - minSizeL);
+            return minLH + t * (maxLH - minLH);
+        };
+        
         const origSize = calculateOptimalFontSize(
             original, origTextEl, origBodyEl, origHeader, origFooter, origAttrs, origAttrInfo, false
         );
@@ -235,11 +261,83 @@ function autoSizeCardText() {
         contTextEl.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
     }
     
-    function lineHeightFor(size) {
-        const maxSizeL = 15, minSizeL = 4;
-        const maxLH = 1.2, minLH = 0.9;
-        const t = (size - minSizeL) / (maxSizeL - minSizeL);
-        return minLH + t * (maxLH - minLH);
+    
+    function processWideCardDouble(card1, card2) {
+        const text1 = card1.querySelector('.card-text');
+        const text2 = card2.querySelector('.card-text');
+        if (!text1 || !text2) return;
+        
+        const body1 = card1.querySelector('.card-body');
+        const body2 = card2.querySelector('.card-body');
+        
+        // Helper function for line height calculation
+        const lineHeightFor = size => {
+            const maxSizeL = 15;
+            const minSizeL = 4;
+            const maxLH = 1.2, minLH = 0.9;
+            const t = (size - minSizeL) / (maxSizeL - minSizeL);
+            return minLH + t * (maxLH - minLH);
+        };
+        
+        const size1 = calculateOptimalFontSize(card1, text1, body1, 
+            card1.querySelector('.card-header'),
+            card1.querySelector('.card-footer'),
+            body1.querySelector('.card-attrs'),
+            body1.querySelector('.card-attr-info'), false);
+        
+        const size2 = calculateOptimalFontSize(card2, text2, body2,
+            card2.querySelector('.card-header'),
+            card2.querySelector('.card-footer'),
+            null, null, true);
+        
+        const finalSize = Math.min(size1, size2);
+        const finalLineHeight = lineHeightFor(finalSize);
+        
+        text1.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
+        text2.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
+    }
+    
+    function processWideCardTriple(card1, card2, card3) {
+        const text1 = card1.querySelector('.card-text');
+        const text2 = card2.querySelector('.card-text');
+        const text3 = card3.querySelector('.card-text');
+        if (!text1 || !text2 || !text3) return;
+        
+        const body1 = card1.querySelector('.card-body');
+        const body2 = card2.querySelector('.card-body');
+        const body3 = card3.querySelector('.card-body');
+        
+        // Helper function for line height calculation
+        const lineHeightFor = size => {
+            const maxSizeL = 15;
+            const minSizeL = 4;
+            const maxLH = 1.2, minLH = 0.9;
+            const t = (size - minSizeL) / (maxSizeL - minSizeL);
+            return minLH + t * (maxLH - minLH);
+        };
+        
+        const size1 = calculateOptimalFontSize(card1, text1, body1,
+            card1.querySelector('.card-header'),
+            card1.querySelector('.card-footer'),
+            body1.querySelector('.card-attrs'),
+            body1.querySelector('.card-attr-info'), false);
+        
+        const size2 = calculateOptimalFontSize(card2, text2, body2,
+            card2.querySelector('.card-header'),
+            card2.querySelector('.card-footer'),
+            null, null, true);
+        
+        const size3 = calculateOptimalFontSize(card3, text3, body3,
+            card3.querySelector('.card-header'),
+            card3.querySelector('.card-footer'),
+            null, null, true);
+        
+        const finalSize = Math.min(size1, size2, size3);
+        const finalLineHeight = lineHeightFor(finalSize);
+        
+        text1.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
+        text2.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
+        text3.style.cssText = `font-size: ${finalSize}pt; line-height: ${finalLineHeight};`;
     }
 }
 

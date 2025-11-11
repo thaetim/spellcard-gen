@@ -89,14 +89,14 @@ def estimate_text_length(text):
     return len(RE_HTML_TAGS.sub('', text or ''))
 
 
-def split_spell_text(text, target_length=800):
-    """Split text while preserving HTML tag integrity and not breaking tables.
+def split_spell_text(text, target_length=800, max_parts=3):
+    """Split text into 1-3 parts while preserving HTML tag integrity.
     
-    First card has ~100px less vertical space due to card-attrs table,
-    so it needs LESS text to fill properly. Split at 36% to balance density.
+    Returns tuple of (part1, part2, part3) where part2/part3 may be None.
+    First card has ~100px less vertical space due to card-attrs table.
     """
     if estimate_text_length(text) < target_length:
-        return sanitize_html(text), None
+        return sanitize_html(text), None, None
 
     text = sanitize_html(text)
     clean_text = RE_HTML_TAGS.sub('', text)
@@ -189,7 +189,20 @@ def split_spell_text(text, target_length=800):
                     part1 = text
                     part2 = None
     
-    return part1, part2
+    # Check if part2 needs further splitting for triple card
+    part3 = None
+    if part2 and estimate_text_length(part2) > target_length * 1.5:
+        # Split part2 roughly in half
+        part2_clean = RE_HTML_TAGS.sub('', part2)
+        part2_len = len(part2_clean)
+        part2_split_pos = int(part2_len * 0.5)
+        
+        part2_break = find_safe_breakpoint(part2, part2_split_pos)
+        if part2_break and part2_break < len(part2):
+            part3 = sanitize_html(part2[part2_break:].strip())
+            part2 = sanitize_html(part2[:part2_break].strip())
+    
+    return part1, part2, part3
 
 
 def apply_phrase_shorthands(text):

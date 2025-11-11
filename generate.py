@@ -18,13 +18,15 @@ def main():
         "page": base / "page.html",
         "card": base / "card.html",
         "card_cont": base / "card-continuation.html",
+        "card_wide_2": base / "card-wide-2.html",
+        "card_wide_3": base / "card-wide-3.html",
         "js": base / "autosize.js",
         "out_html": Path("spell_cards.html"),
         "out_js": Path("autosize.js")
     }
 
-    css, page, card, card_cont, js = [
-        load_file(p) for p in (paths["css"], paths["page"], paths["card"], paths["card_cont"], paths["js"])
+    css, page, card, card_cont, card_wide_2, card_wide_3, js = [
+        load_file(p) for p in (paths["css"], paths["page"], paths["card"], paths["card_cont"], paths["card_wide_2"], paths["card_wide_3"], paths["js"])
     ]
 
     fixed_spells = load_fixed_spells(paths["fixed_csv"])
@@ -35,22 +37,60 @@ def main():
     broken_spell_texts = []
     paired_cards = {}
     
+    # Separate wide cards from single cards
+    wide_2_cards = []
+    wide_3_cards = []
+    single_cards = []
+    
     def generate_and_track(spell):
         spell_name = spell['Name']
         if spell_name in fixed_spells:
-            # print(f"Using fixed data for {spell_name}")
             spell = fixed_spells[spell_name]
         
-        card_html = generate_spell_card(spell, card, card_cont, paired_cards)
+        card_html = generate_spell_card(spell, card, card_cont, paired_cards, card_wide_2, card_wide_3)
         
         text = spell.get('Text', '')
         info = detect_broken_elements(text)
         if info and spell_name not in fixed_spells:
             broken_spell_texts.append((spell_name, info))
-            
-        return card_html
+        
+        # Determine card type by checking classes in output
+        if 'card-group-3' in card_html:
+            return ('wide_3', card_html)
+        elif 'card-group-2' in card_html:
+            return ('wide_2', card_html)
+        else:
+            return ('single', card_html)
     
-    cards = [generate_and_track(spell) for spell in merged_spells]
+    # Generate all cards and categorize
+    for spell in merged_spells:
+        card_type, card_html = generate_and_track(spell)
+        if card_type == 'wide_3':
+            wide_3_cards.append(card_html)
+        elif card_type == 'wide_2':
+            wide_2_cards.append(card_html)
+        else:
+            single_cards.append(card_html)
+    
+    # Interleave for efficient printing:
+    # - Triple-wide (3 slots) = full row, don't follow with anything
+    # - Double-wide (2 slots) + Single (1 slot) = full row
+    cards = []
+    single_idx = 0
+    
+    # Add all triple-wide cards first (they take full rows)
+    cards.extend(wide_3_cards)
+    
+    # Then interleave double-wide with singles
+    for wide_card in wide_2_cards:
+        cards.append(wide_card)
+        # After each double-wide, add a single card if available
+        if single_idx < len(single_cards):
+            cards.append(single_cards[single_idx])
+            single_idx += 1
+    
+    # Add remaining single cards at the end
+    cards.extend(single_cards[single_idx:])
     
     if broken_spell_texts:
         print(f"\nSpells needing manual description fix ({len(broken_spell_texts)}):")
@@ -111,8 +151,13 @@ if __name__ == "__main__":
     finally:
         keyboard.unhook_all()
 
-# TODO: fix Tasha's Otherworldly Guise
+# TODO: fix Tasha's Otherworldly Guise text
+# TODO: fix Arcane Lock attr labels overlaps (why do they even happen?)
 # TODO: better contrast damage type colors
 # TODO: better text split and font autosizing (text_splitting.py changes in ratio do not seem to be effective, e.g. Wish spell)
 # TODO: triple split cards
 # TODO: continuous split cards
+# TODO: double and triple cards need to be whole in a single row
+
+# the extended cards (2 sided and 3 sided) NEED to be in a single row - fill the pages with them first and then the single-side cards; the header and footer colors need to continue also in the spaces between the extended cards' sides; the center card in the triple should have neither of the side borders
+# List directory C:\\CODE\\TTRPG\\spellcard-generator; read the files; fix the continuous card logic - the cards still arent continuous in the sense that the background does not connect between the card sides, and the cards seem to connect vertically instead of horizontally

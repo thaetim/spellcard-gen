@@ -7,10 +7,26 @@ body {
     margin: 0;
     padding: 8mm;
     background: #fff;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.4rem;
+    align-content: flex-start;
+}
+
+/* Card groups for continuous wide cards */
+.card-group {
+    display: flex;
+    gap: 0;
+    margin: 0;
+    page-break-inside: avoid;
+}
+
+.card-group-2 {
+    width: calc(58mm * 2);
+}
+
+.card-group-3 {
+    width: calc(58mm * 3);
 }
 
 .card {
@@ -25,6 +41,37 @@ body {
     overflow: hidden;
     page-break-inside: avoid;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+/* Connected wide cards - horizontally continuous */
+.card-wide-first {
+    border-right: none;
+}
+
+.card-wide-cont {
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+}
+
+/* Last card in a wide group gets right border and shadow */
+.card-group-2 .card:last-child,
+.card-group-3 .card:last-child {
+    border-right: 1pt solid var(--card-border, #000);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* First card in wide group gets left shadow */
+.card-group .card:first-child {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* More padding for continuation card text */
+.card-wide-cont .card-body {
+    padding-top: 5pt;
+    position: relative;
+    z-index: 2;
 }
 
 .card-header {
