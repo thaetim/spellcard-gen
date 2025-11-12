@@ -27,7 +27,7 @@ body {
     overflow: hidden;
 }
 
-.card-wide {
+.card {
     display: flex;
     flex-direction: column;
     border: 1pt solid var(--card-border, #000);
@@ -37,12 +37,12 @@ body {
     overflow: hidden;
 }
 
-.card-wide-3 {
+.card-triple {
     width: calc(58mm * 3);
     height: 82mm;
 }
 
-.card-wide-2 {
+.card-double {
     width: calc(58mm * 2);
     height: 82mm;
 }
@@ -55,7 +55,7 @@ body {
 
 /* ===== CARD HEADER STYLES ===== */
 .card-single .card-header,
-.card-wide .card-header {
+.card .card-header {
     background: var(--header-color, #304A90);
     background-image: var(--header-bg, none);
     background-blend-mode: multiply;
@@ -77,7 +77,7 @@ body {
     line-height: 1.1;
 }
 
-.card-wide .card-header {
+.card .card-header {
     flex: 1;
 }
 
@@ -107,7 +107,7 @@ body {
     height: 100%;
 }
 
-.card-wide-2 .card-columns {
+.card-double .card-columns {
     column-count: 2;
     column-width: 48mm;
     column-gap: 20pt;
@@ -117,7 +117,7 @@ body {
 
 /* ===== CARD FOOTER STYLES ===== */
 .card-single .card-footer,
-.card-wide .card-footer {
+.card .card-footer {
     border-top: 0pt solid var(--cell-border, #fff);
     background: var(--footer-color, #304A90);
     background-image: var(--footer-bg, none);
@@ -136,7 +136,7 @@ body {
     line-height: 1;
 }
 
-.card-wide .card-footer {
+.card .card-footer {
     flex: 1;
 }
 

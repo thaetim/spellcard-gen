@@ -120,7 +120,7 @@ function applyFontSizeToCard(card, fontSize) {
 }
 
 function autoSizeAllCards() {
-    const cards = document.querySelectorAll('.card-single, .card-wide');
+    const cards = document.querySelectorAll('.card-single, .card');
     if (!cards.length) {
         console.warn("No cards found for autosizing");
         return;
@@ -144,9 +144,9 @@ function autoSizeAllCards() {
             if (optimalSize !== null) {
                 singleCardOptimalSizes.push(optimalSize);
             }
-        } else if (card.classList.contains('card-wide-2')) {
+        } else if (card.classList.contains('card-double')) {
             doubles++;
-        } else if (card.classList.contains('card-wide-3')) {
+        } else if (card.classList.contains('card-triple')) {
             triples++;
         }
     });
@@ -173,7 +173,7 @@ function autoSizeAllCards() {
                 applyFontSizeToCard(card, optimalSize);
                 
                 const body = card.querySelector('.card-content');
-                const cardType = card.classList.contains('card-wide-2') ? 'double' : 'triple';
+                const cardType = card.classList.contains('card-double') ? 'double' : 'triple';
                 console.log(`→ ${cardType} card final font ${optimalSize.toFixed(2)}pt ${isOverflowing(body) ? '(OVERFLOWING!)' : ''}`);
             }
         }

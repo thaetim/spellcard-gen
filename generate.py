@@ -18,8 +18,8 @@ def main():
         "page": base / "page.html",
         "card": base / "card.html",
         "card_cont": base / "card-continuation.html",
-        "card_wide_2": base / "card-wide-2.html",
-        "card_wide_3": base / "card-wide-3.html",
+        "card_wide_2": base / "card-double.html",
+        "card_wide_3": base / "card-triple.html",
         "js": base / "autosize.js",
         "out_html": Path("spell_cards.html"),
         "out_js": Path("autosize.js")
