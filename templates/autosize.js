@@ -16,8 +16,8 @@ function throttle(func, limit) {
     }
 }
 
-// waits for DOM layout to stabilize before running
-function waitForLayoutStable(selector, callback, maxTries = 50) {
+// Enhanced layout stabilization with multiple metrics
+function waitForLayoutStable(selector, callback, maxTries = 75) {
     const container = document.querySelector(selector) || document.body;
     if (!container) {
         console.warn("No container found:", selector);
@@ -26,78 +26,200 @@ function waitForLayoutStable(selector, callback, maxTries = 50) {
 
     let tries = 0;
     let lastHeight = container.scrollHeight;
+    let lastWidth = container.scrollWidth;
 
     const interval = setInterval(() => {
         const newHeight = container.scrollHeight;
-        const diff = Math.abs(newHeight - lastHeight);
+        const newWidth = container.scrollWidth;
+        const heightDiff = Math.abs(newHeight - lastHeight);
+        const widthDiff = Math.abs(newWidth - lastWidth);
 
-        if (diff < 0.25) {
+        if (heightDiff < 0.1 && widthDiff < 0.1) {
             clearInterval(interval);
-            console.log("Layout stabilized — final sizing pass");
-            callback();
+            console.log("Layout fully stabilized");
+            setTimeout(callback, 50); // Extra safety delay
         } else if (++tries > maxTries) {
             clearInterval(interval);
-            console.warn("Layout not stable, forcing callback");
-            callback();
+            console.warn("Layout not stable, proceeding anyway");
+            setTimeout(callback, 100);
         }
         lastHeight = newHeight;
-    }, 100);
+        lastWidth = newWidth;
+    }, 80);
 }
 
+// Comprehensive overflow detection
 function isOverflowing(el) {
-    // Consistent tolerance for all card types
-    const tolerance = 2;
-    return el.scrollHeight > el.clientHeight + tolerance || el.scrollWidth > el.clientWidth + tolerance;
+    if (!el) return false;
+    
+    // Force synchronous layout
+    const rect = el.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(el);
+    
+    // Check height overflow with multiple methods
+    const clientHeight = Math.floor(rect.height);
+    const scrollHeight = Math.floor(el.scrollHeight);
+    const heightOverflow = scrollHeight > clientHeight + 1; // 1px tolerance
+    
+    // Check width overflow
+    const clientWidth = Math.floor(rect.width);
+    const scrollWidth = Math.floor(el.scrollWidth);
+    const widthOverflow = scrollWidth > clientWidth + 1;
+    
+    // Special handling for multi-column layouts
+    const isMultiColumn = computedStyle.columnCount !== 'auto' && 
+                         parseInt(computedStyle.columnCount) > 1;
+    
+    if (isMultiColumn) {
+        // For columns, check if content spills beyond visible area
+        const columnGap = parseInt(computedStyle.columnGap) || 0;
+        const columnWidth = parseInt(computedStyle.columnWidth) || (clientWidth / parseInt(computedStyle.columnCount));
+        const estimatedContentWidth = (scrollWidth * parseInt(computedStyle.columnCount)) + (columnGap * (parseInt(computedStyle.columnCount) - 1));
+        const columnOverflow = estimatedContentWidth > clientWidth;
+        
+        return heightOverflow || widthOverflow || columnOverflow;
+    }
+    
+    return heightOverflow || widthOverflow;
 }
 
+// Robust font size calculation with fallbacks
 function calculateOptimalFontSize(card) {
     const cardContent = card.querySelector('.card-content');
     if (!cardContent) return null;
 
-    // Use let instead of const for variables that need to be reassigned
+    // Store original state
+    const originalFontSize = cardContent.style.fontSize;
+    const originalDisplay = cardContent.style.display;
+    
+    // Ensure element is visible for accurate measurements
+    cardContent.style.display = 'block';
+    
+    // Font size boundaries
+    const absoluteMinFont = 4.5; // Absolute minimum for readability
     let minFont = 6;
     let maxFont = 10;
-
     let bestFit = minFont;
-    let iteration = 0;
 
-    // Reset to test at max font first
-    cardContent.style.fontSize = maxFont + "pt";
-
-    // Binary search for optimal size
-    const precision = 0.05;
-    while (maxFont - minFont > precision && iteration++ < 100) {
-        const mid = (minFont + maxFont) / 2;
-        cardContent.style.fontSize = mid + "pt";
-
-        if (isOverflowing(cardContent)) {
-            maxFont = mid - precision;
-        } else {
-            bestFit = mid;
-            minFont = mid + precision;
+    try {
+        // Test at max font first
+        cardContent.style.fontSize = maxFont + "pt";
+        forceReflow(cardContent);
+        
+        if (!isOverflowing(cardContent)) {
+            return maxFont; // Perfect fit at maximum
         }
+
+        // Enhanced binary search with better precision
+        const precision = 0.01;
+        let iteration = 0;
+        let lastWorkingSize = minFont;
+        
+        while (maxFont - minFont > precision && iteration++ < 200) {
+            const mid = (minFont + maxFont) / 2;
+            cardContent.style.fontSize = mid + "pt";
+            forceReflow(cardContent);
+
+            if (isOverflowing(cardContent)) {
+                maxFont = mid - precision;
+            } else {
+                bestFit = mid;
+                lastWorkingSize = mid;
+                minFont = mid + precision;
+            }
+        }
+
+        // Apply best fit and test
+        bestFit = Math.max(bestFit, lastWorkingSize);
+        cardContent.style.fontSize = bestFit + "pt";
+        forceReflow(cardContent);
+
+        // Progressive emergency reduction with multiple strategies
+        let emergencyTries = 0;
+        const maxEmergencyTries = 50;
+        
+        while (isOverflowing(cardContent) && emergencyTries < maxEmergencyTries && bestFit > absoluteMinFont) {
+            // Adaptive step size based on remaining tries
+            const remainingTries = maxEmergencyTries - emergencyTries;
+            const step = remainingTries > 30 ? 0.2 : 
+                        remainingTries > 15 ? 0.1 : 
+                        0.05;
+            
+            bestFit = Math.max(bestFit - step, absoluteMinFont);
+            cardContent.style.fontSize = bestFit + "pt";
+            forceReflow(cardContent);
+            emergencyTries++;
+            
+            // Emergency breakout if we're making no progress
+            if (emergencyTries > 10 && isOverflowing(cardContent)) {
+                // Try more aggressive reduction
+                bestFit = Math.max(bestFit - 0.3, absoluteMinFont);
+                cardContent.style.fontSize = bestFit + "pt";
+                forceReflow(cardContent);
+            }
+        }
+
+        // Final safety pass - ensure no overflow at any cost
+        if (isOverflowing(cardContent) && bestFit > absoluteMinFont) {
+            console.warn(`Final emergency reduction for card`);
+            while (isOverflowing(cardContent) && bestFit > absoluteMinFont) {
+                bestFit = Math.max(bestFit - 0.05, absoluteMinFont);
+                cardContent.style.fontSize = bestFit + "pt";
+                forceReflow(cardContent);
+            }
+        }
+
+        // Apply safety margin if we found a working size
+        if (!isOverflowing(cardContent)) {
+            const safetyMargin = 0.15;
+            const safeSize = Math.max(bestFit - safetyMargin, absoluteMinFont);
+            cardContent.style.fontSize = safeSize + "pt";
+            forceReflow(cardContent);
+            
+            // Verify safety margin didn't break it
+            if (!isOverflowing(cardContent)) {
+                bestFit = safeSize;
+            }
+        }
+
+        return Math.max(bestFit, absoluteMinFont);
+
+    } catch (error) {
+        console.error('Error calculating font size:', error);
+        return 7; // Fallback size
+    } finally {
+        // Restore original display state
+        cardContent.style.display = originalDisplay;
     }
+}
 
-    // Apply safety margin
-    const safetyMargin = 0.1;
-    bestFit = Math.max(bestFit - safetyMargin, minFont);
-
-    // Final overflow check with emergency reduction
-    let emergencyTries = 0;
-    while (isOverflowing(cardContent) && emergencyTries < 25 && bestFit > minFont) {
-        bestFit = bestFit - 0.15;
-        cardContent.style.fontSize = bestFit.toFixed(2) + "pt";
-        emergencyTries++;
-    }
-
-    return bestFit;
+// Utility function to force browser reflow
+function forceReflow(element) {
+    void element.offsetHeight;
+    void element.offsetWidth;
+    void element.getBoundingClientRect();
 }
 
 function applyFontSizeToCard(card, fontSize) {
     const cardContent = card.querySelector('.card-content');
     if (cardContent) {
         cardContent.style.fontSize = fontSize.toFixed(2) + "pt";
+        forceReflow(cardContent);
+        
+        // Final verification
+        if (isOverflowing(cardContent)) {
+            console.warn(`Card STILL overflowing at ${fontSize.toFixed(2)}pt - applying emergency fix`);
+            // Apply immediate fix
+            let emergencySize = fontSize;
+            while (isOverflowing(cardContent) && emergencySize > 4.5) {
+                emergencySize -= 0.1;
+                cardContent.style.fontSize = emergencySize.toFixed(2) + "pt";
+                forceReflow(cardContent);
+            }
+            return emergencySize;
+        }
     }
+    return fontSize;
 }
 
 function autoSizeAllCards() {
@@ -108,37 +230,93 @@ function autoSizeAllCards() {
     }
 
     let singles = 0, doubles = 0, triples = 0;
+    let overflowCount = 0;
 
-    // Calculate and apply optimal sizes for all cards
+    console.log('Starting font sizing for', cards.length, 'cards');
+
+    // Reset all cards to default state
     cards.forEach(card => {
-        if (card.classList.contains('card-single')) {
-            singles++;
-        } else if (card.classList.contains('card-double')) {
-            doubles++;
-        } else if (card.classList.contains('card-triple')) {
-            triples++;
-        }
-
-        const optimalSize = calculateOptimalFontSize(card);
-        if (optimalSize !== null) {
-            applyFontSizeToCard(card, optimalSize);
-            
-            const cardContent = card.querySelector('.card-content');
-            const cardType = card.classList.contains('card-single') ? 'single' : 
-                            card.classList.contains('card-double') ? 'double' : 'triple';
-            console.log(`→ ${cardType} card final font ${optimalSize.toFixed(2)}pt ${isOverflowing(cardContent) ? '(OVERFLOWING!)' : ''}`);
+        const cardContent = card.querySelector('.card-content');
+        if (cardContent) {
+            cardContent.style.fontSize = '';
+            cardContent.style.display = 'block';
         }
     });
 
-    console.log(`Font sizing complete — singles=${singles}, doubles=${doubles}, triples=${triples}`);
+    // Major layout force
+    forceReflow(document.body);
+    
+    // Process cards in batches to avoid layout thrashing
+    const processCardBatch = (cardBatch, index) => {
+        // console.log(`Processing batch ${index + 1} of ${cardBatch.length} cards`);
+        
+        cardBatch.forEach((card, cardIndex) => {
+            // Small delay between cards to allow layout
+            setTimeout(() => {
+                if (card.classList.contains('card-single')) {
+                    singles++;
+                } else if (card.classList.contains('card-double')) {
+                    doubles++;
+                } else if (card.classList.contains('card-triple')) {
+                    triples++;
+                }
+
+                const optimalSize = calculateOptimalFontSize(card);
+                if (optimalSize !== null) {
+                    const finalSize = applyFontSizeToCard(card, optimalSize);
+                    
+                    const cardContent = card.querySelector('.card-content');
+                    const cardType = card.classList.contains('card-single') ? 'single' : 
+                                    card.classList.contains('card-double') ? 'double' : 'triple';
+                    
+                    const overflowing = isOverflowing(cardContent);
+                    if (overflowing) {
+                        overflowCount++;
+                        console.error(`❌ ${cardType} card STILL OVERFLOWING at ${finalSize.toFixed(2)}pt`);
+                    } else {
+                        // console.log(`✅ ${cardType} card sized to ${finalSize.toFixed(2)}pt`);
+                    }
+                }
+            }, cardIndex * 20); // Stagger card processing
+        });
+    };
+
+    // Process cards in smaller batches
+    const batchSize = 5;
+    for (let i = 0; i < cards.length; i += batchSize) {
+        const batch = Array.from(cards).slice(i, i + batchSize);
+        processCardBatch(batch, i / batchSize);
+    }
+
+    // Final report
+    setTimeout(() => {
+        console.log(`Font sizing complete — singles=${singles}, doubles=${doubles}, triples=${triples}`);
+        console.log(`${overflowCount} cards with overflow issues`);
+        
+        if (overflowCount > 0) {
+            console.error(`❌ ${overflowCount} cards still have overflow issues - check CSS constraints`);
+        } else {
+            console.log('✅ All cards properly sized!');
+        }
+    }, cards.length * 25 + 1000);
 }
 
 const autoSizeAll = throttle(() => {
+    console.clear();
     autoSizeAllCards();
-}, 300);
+}, 500);
 
-// Run on load and on resize
-waitForLayoutStable('body', autoSizeAll);
-window.addEventListener('resize', throttle(autoSizeAll, 500));
+// Enhanced event listeners
+window.addEventListener('load', () => {
+    setTimeout(() => waitForLayoutStable('body', autoSizeAll), 500);
+});
+
+window.addEventListener('resize', throttle(() => {
+    console.log('Window resized - recalculating fonts');
+    autoSizeAll();
+}, 600));
+
+// Export for manual triggering if needed
+window.triggerFontResize = autoSizeAll;
 
 })();
