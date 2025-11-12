@@ -28,7 +28,7 @@ def fix_text(text, print_spell = None):
     
     # Convert to table if we have multiple enumeration items
     if len(matches) > 1:
-        table_rows = ''.join(f'<tr><td>- {match.strip()}</td></tr>' for match in matches[:-1])
+        table_rows = ''.join(f'<tr><td>• {match.strip()}</td></tr>' for match in matches[:-1])
         return before_colon + ':<table>' + table_rows + '</table>' + matches[-1]
     
     # Original formatting for other cases

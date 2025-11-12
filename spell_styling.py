@@ -13,19 +13,19 @@ def blend_with_black(hex_color, blend_percent=50):
 
 # Damage type colors (50% blended with black)
 DAMAGE_COLORS_BASE = {
-    'acid': '#00FF00',
-    'bludgeoning': '#808080',
-    'cold': '#00FFFF',
-    'fire': '#FF0000',
-    'force': '#800080',
-    'lightning': '#FFFF00',
+    'acid': '#00ff00',
+    'bludgeoning': '#82755a',
+    'cold': '#00ffff',
+    'fire': '#ff0000',
+    'force': '#0000ff',
+    'lightning': '#ffff00',
     'necrotic': '#000000',
-    'piercing': '#808080',
+    'piercing': '#5a6b82',
     'poison': '#800080',
-    'psychic': '#FFC0CB',
-    'radiant': '#FFFFFF',
-    'slashing': '#808080',
-    'thunder': '#808080',
+    'psychic': '#ff3da4',
+    'radiant': '#ffffff',
+    'slashing': '#825a5a',
+    'thunder': '#77825a',
 }
 
 DAMAGE_COLORS = {
