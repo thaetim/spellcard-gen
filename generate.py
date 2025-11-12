@@ -156,8 +156,8 @@ if __name__ == "__main__":
 
 # TODO: fix damage type coloring on Tasha's Otherworldly Guise text
 # TODO: fix Arcane Lock attr labels overlaps (why do they even happen?)
-# TODO: Fizban's Platinum Shield damage types are colored but the 'damage' word isn't removed
-# TODO: Lunar Transfer i Octarine Spray
+# TODO: Lunar Transfer i Octarine Spray font size
+# TODO: Lunar Transfer table
 # TODO: better contrast damage type colors
 # TODO: ensure full card filled rows (a singleside card after every double card)
 # FIXME: bludgeoning, 2d3541; background-color: #2d354120; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">piercing, and slashing 
