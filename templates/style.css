@@ -82,7 +82,7 @@ body {
 }
 
 .card-header + .card-header {
-    border-left: 1pt solid var(--cell-border, #fff);
+    border-left: 1pt solid #ffffff0f;
 }
 
 /* ===== CARD BODY STYLES ===== */
@@ -141,7 +141,7 @@ body {
 }
 
 .card-footer + .card-footer {
-    border-left: 1pt solid var(--cell-border, #fff);
+    border-left: 1pt solid #ffffff0f;
 }
 
 /* ===== CARD TEXT & CONTENT ===== */

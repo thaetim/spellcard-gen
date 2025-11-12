@@ -45,7 +45,12 @@ def main():
         if spell_name in fixed_spells:
             spell = fixed_spells[spell_name]
         
-        card_html = generate_spell_card(spell, card_single, card_double, card_triple)
+
+        card_html = generate_spell_card(spell, {
+            'single': card_single,
+            'double': card_double,
+            'triple': card_triple,
+        })
         
         text = spell.get('Text', '')
         info = detect_broken_elements(text)

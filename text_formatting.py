@@ -88,6 +88,88 @@ def estimate_text_length(text):
     """Estimate text length without HTML tags."""
     return len(RE_HTML_TAGS.sub('', text or ''))
 
+def split_spell_size(text, target_length=800):
+    """Return 1, 2, or 3 indicating how many parts split_spell_text would produce.
+
+    Heuristic mirrors original splitting logic:
+    - If cleaned length < target_length -> 1
+    - Else compute first-part cutoff at ~36% of cleaned length.
+      If remainder after a safe breakpoint is short -> 2
+    - If remainder is very long (>1.5 * target_length) -> 3
+    """
+    if not text:
+        return 'single'
+
+    txt = sanitize_html(text)
+    clean = RE_HTML_TAGS.sub('', txt)
+    total_len = len(clean)
+    if total_len < target_length:
+        return 'single'
+
+    # approximate target positions
+    first_target = int(total_len * 0.36)
+
+    def find_safe_breakpoint_cleaned(html, target_clean_pos):
+        current_clean = 0
+        in_tag = False
+        in_table = False
+        tag_buf = ""
+        for i, ch in enumerate(html):
+            if ch == '<':
+                in_tag = True
+                tag_buf = '<'
+            elif ch == '>' and in_tag:
+                in_tag = False
+                tag_buf += '>'
+                if tag_buf.startswith('<table'):
+                    in_table = True
+                elif tag_buf.startswith('</table'):
+                    in_table = False
+                tag_buf = ""
+                continue
+            elif in_tag:
+                tag_buf += ch
+                continue
+            else:
+                current_clean += 1
+
+            if current_clean >= target_clean_pos and not in_tag and not in_table:
+                # try to return a breakpoint nearby (prefer sentence end or whitespace)
+                look_end = min(len(html), i + 100)
+                for j in range(i, look_end):
+                    if html[j] in '.;' and j + 1 < len(html) and html[j+1] in ' \t\n':
+                        window = html[max(0, j-20):min(len(html), j+50)]
+                        if '<table' not in window and '</table>' not in window:
+                            return j + 2
+                    if html[j] in ' \t\n':
+                        window = html[max(0, j-20):min(len(html), j+50)]
+                        if '<table' not in window and '</table>' not in window:
+                            return j + 1
+        # fallback: if still inside a table, try to jump to its end
+        if in_table:
+            end = html.find('</table>', i)
+            if end != -1:
+                return end + 8
+        return min(len(html), target_clean_pos)
+
+    first_break = find_safe_breakpoint_cleaned(txt, first_target)
+    if first_break >= len(txt):
+        return 'single'
+
+    # estimate lengths of parts by removing tags
+    part1_clean_len = len(RE_HTML_TAGS.sub('', txt[:first_break]))
+    part2_clean_len = len(RE_HTML_TAGS.sub('', txt[first_break:]))
+
+    # if part2 is short enough to fit in one card -> 2
+    if part2_clean_len <= target_length:
+        return 'double'
+
+    # if part2 is long (>1.5 * target_length) -> 3
+    if part2_clean_len > target_length * 1.5:
+        return 'triple'
+
+    # default: split into 2 parts
+    return 'double'
 
 def split_spell_text(text, target_length=800, max_parts=3):
     """Split text into 1-3 parts while preserving HTML tag integrity.

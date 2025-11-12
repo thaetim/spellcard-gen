@@ -1,7 +1,7 @@
 """Spell card generation and formatting."""
 import re
 from html import escape
-from text_formatting import fix_text, sanitize_html, split_spell_text, apply_phrase_shorthands, fix_broken_line_breaks
+from text_formatting import fix_text, sanitize_html, split_spell_size, apply_phrase_shorthands, fix_broken_line_breaks
 from spell_styling import colorize_text
 
 
@@ -131,7 +131,7 @@ def replace_placeholders(template, mapping):
     return template
 
 
-def generate_spell_card(spell, card_single_template, card_double_template=None, card_triple_template=None):
+def generate_spell_card(spell, card_templates):
     """Generate HTML for a spell card with optional continuation or wide cards."""
     card_id = generate_card_id(spell['Name'])
     lvl = spell.get('Level', '')
@@ -159,29 +159,7 @@ def generate_spell_card(spell, card_single_template, card_double_template=None, 
     text = text.replace('<br><br>', '<br><span style="display: block; height: 0.5em;"></span>')
     text = fix_broken_line_breaks(text)
     
-    text_part1, text_part2, text_part3 = split_spell_text(text)
-    
-    if text_part1 and text_part2:
-        tables_in_part1 = text_part1.count('<table')
-        tables_closed_in_part1 = text_part1.count('</table>')
-        
-        if tables_in_part1 > tables_closed_in_part1:
-            last_table_start = text_part1.rfind('<table')
-            if last_table_start != -1:
-                text_before_table = text_part1[:last_table_start].strip()
-                text_with_table = text_part1[last_table_start:] + text_part2
-                
-                if text_before_table and len(text_before_table) > 50:
-                    text_part1 = text_before_table
-                    text_part2 = text_with_table
-                else:
-                    text_part1 = text
-                    text_part2 = None
-    
     for proc_func in [colorize_text, apply_phrase_shorthands, sanitize_html]:
-        # text_part1 = proc_func(text_part1)
-        # if text_part2:
-        #     text_part2 = proc_func(text_part2) 
         text = proc_func(text)
     
     primary_class = parse_classes(spell.get('Classes', '')).title()
@@ -224,20 +202,4 @@ def generate_spell_card(spell, card_single_template, card_double_template=None, 
         if key not in ["TEXT", "SPELL_TYPE"]:
             mapping[key] = escape(str(value))
 
-    # Decide card type based on number of parts
-    if text_part3 and card_triple_template:
-        # Use triple-wide card (3 adjacent cards) - all text in first card
-        wide_mapping = mapping.copy()
-        wide_mapping["TEXT"] = text  # Put ALL text in first card
-        wide_mapping["TEXT_PART2"] = ""  # Empty continuation cards
-        wide_mapping["TEXT_PART3"] = ""
-        return replace_placeholders(card_triple_template, wide_mapping)
-    elif text_part2 and card_double_template:
-        # Use double-wide card (2 adjacent cards) - all text in first card  
-        wide_mapping = mapping.copy()
-        wide_mapping["TEXT"] = text  # Put ALL text in first card
-        wide_mapping["TEXT_PART2"] = ""  # Empty continuation card
-        return replace_placeholders(card_double_template, wide_mapping)
-    else:
-        # Single card
-        return replace_placeholders(card_single_template, mapping)
+    return replace_placeholders(card_templates[split_spell_size(text)], mapping)
