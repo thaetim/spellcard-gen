@@ -50,7 +50,7 @@ function isOverflowing(el) {
     return el.scrollHeight > el.clientHeight + tolerance || el.scrollWidth > el.clientWidth + tolerance;
 }
 
-function autoSizeCardText(card) {
+function calculateOptimalFontSize(card) {
     const isSingleCard = card.classList.contains('card-single');
     
     // For single cards, target .card-text specifically
@@ -59,7 +59,7 @@ function autoSizeCardText(card) {
         ? card.querySelector('.card-body')
         : card.querySelector('.card-content');
     
-    if (!body) return;
+    if (!body) return null;
 
     // Different strategies for single vs multi cards
     let minFont, maxFont;
@@ -93,25 +93,33 @@ function autoSizeCardText(card) {
         }
     }
 
-    // Apply final size with small safety margin
+    // Apply small safety margin
     const safetyMargin = isSingleCard ? 0.15 : 0.1;
     bestFit = Math.max(bestFit - safetyMargin, minFont);
-    body.style.fontSize = bestFit.toFixed(2) + "pt";
 
-    // Final overflow check
+    // Final overflow check with emergency reduction
     let emergencyTries = 0;
-    while (isOverflowing(body) && emergencyTries < 30 && bestFit > minFont) {
+    while (isOverflowing(body) && emergencyTries < 8 && bestFit > minFont) {
         bestFit = bestFit - 0.15;
         body.style.fontSize = bestFit.toFixed(2) + "pt";
         emergencyTries++;
     }
 
-    const cardType = isSingleCard ? 'single' : 
-                    card.classList.contains('card-wide-2') ? 'double' : 'triple';
-    console.log(`→ ${cardType} card final font ${bestFit.toFixed(2)}pt ${isOverflowing(body) ? '(OVERFLOWING!)' : ''}`);
+    return bestFit;
 }
 
-const autoSizeAll = throttle(() => {
+function applyFontSizeToCard(card, fontSize) {
+    const isSingleCard = card.classList.contains('card-single');
+    const body = isSingleCard 
+        ? card.querySelector('.card-body')
+        : card.querySelector('.card-content');
+    
+    if (body) {
+        body.style.fontSize = fontSize.toFixed(2) + "pt";
+    }
+}
+
+function autoSizeAllCards() {
     const cards = document.querySelectorAll('.card-single, .card-wide');
     if (!cards.length) {
         console.warn("No cards found for autosizing");
@@ -119,23 +127,63 @@ const autoSizeAll = throttle(() => {
     }
 
     let singles = 0, doubles = 0, triples = 0;
+    const singleCardOptimalSizes = [];
 
-    // Process single cards first since they're more constrained
+    // First pass: calculate optimal sizes for all cards
     const sortedCards = Array.from(cards).sort((a, b) => {
         if (a.classList.contains('card-single') && !b.classList.contains('card-single')) return -1;
         if (!a.classList.contains('card-single') && b.classList.contains('card-single')) return 1;
         return 0;
     });
 
+    // Calculate optimal sizes without applying them yet
     sortedCards.forEach(card => {
-        if (card.classList.contains('card-single')) singles++;
-        else if (card.classList.contains('card-wide-2')) doubles++;
-        else if (card.classList.contains('card-wide-3')) triples++;
+        if (card.classList.contains('card-single')) {
+            singles++;
+            const optimalSize = calculateOptimalFontSize(card);
+            if (optimalSize !== null) {
+                singleCardOptimalSizes.push(optimalSize);
+            }
+        } else if (card.classList.contains('card-wide-2')) {
+            doubles++;
+        } else if (card.classList.contains('card-wide-3')) {
+            triples++;
+        }
+    });
 
-        autoSizeCardText(card);
+    // For single cards, find the minimum optimal size and apply it to all
+    const minSingleCardSize = singleCardOptimalSizes.length > 0 
+        ? Math.min(...singleCardOptimalSizes) 
+        : 7; // fallback size
+
+    console.log(`Single cards unified font size: ${minSingleCardSize.toFixed(2)}pt`);
+
+    // Second pass: apply sizes
+    sortedCards.forEach(card => {
+        if (card.classList.contains('card-single')) {
+            applyFontSizeToCard(card, minSingleCardSize);
+            
+            const body = card.querySelector('.card-body');
+            const cardType = 'single';
+            console.log(`→ ${cardType} card final font ${minSingleCardSize.toFixed(2)}pt ${isOverflowing(body) ? '(OVERFLOWING!)' : ''}`);
+        } else {
+            // For multi-cards, use individual sizing as before
+            const optimalSize = calculateOptimalFontSize(card);
+            if (optimalSize !== null) {
+                applyFontSizeToCard(card, optimalSize);
+                
+                const body = card.querySelector('.card-content');
+                const cardType = card.classList.contains('card-wide-2') ? 'double' : 'triple';
+                console.log(`→ ${cardType} card final font ${optimalSize.toFixed(2)}pt ${isOverflowing(body) ? '(OVERFLOWING!)' : ''}`);
+            }
+        }
     });
 
     console.log(`Font sizing complete — singles=${singles}, doubles=${doubles}, triples=${triples}`);
+}
+
+const autoSizeAll = throttle(() => {
+    autoSizeAllCards();
 }, 300);
 
 // Run on load and on resize
