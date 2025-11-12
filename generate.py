@@ -16,17 +16,16 @@ def main():
         "fixed_csv": Path("data/Spells-fixed.csv"),
         "css": base / "style.css",
         "page": base / "page.html",
-        "card": base / "card.html",
-        "card_cont": base / "card-continuation.html",
-        "card_wide_2": base / "card-double.html",
-        "card_wide_3": base / "card-triple.html",
+        "card_single": base / "card-single.html",
+        "card_double": base / "card-double.html",
+        "card_striple": base / "card-triple.html",
         "js": base / "autosize.js",
         "out_html": Path("spell_cards.html"),
         "out_js": Path("autosize.js")
     }
 
-    css, page, card, card_cont, card_wide_2, card_wide_3, js = [
-        load_file(p) for p in (paths["css"], paths["page"], paths["card"], paths["card_cont"], paths["card_wide_2"], paths["card_wide_3"], paths["js"])
+    css, page, card, card_double, card_striple, js = [
+        load_file(p) for p in (paths["css"], paths["page"], paths["card_single"], paths["card_double"], paths["card_striple"], paths["js"])
     ]
 
     fixed_spells = load_fixed_spells(paths["fixed_csv"])
@@ -47,7 +46,7 @@ def main():
         if spell_name in fixed_spells:
             spell = fixed_spells[spell_name]
         
-        card_html = generate_spell_card(spell, card, card_cont, paired_cards, card_wide_2, card_wide_3)
+        card_html = generate_spell_card(spell, card, paired_cards, card_double, card_striple)
         
         text = spell.get('Text', '')
         info = detect_broken_elements(text)
