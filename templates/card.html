@@ -1,42 +1,53 @@
-<div class="card-single class-<!--{{SCHOOL}}-->">
-    <div class="card-header">
-        <div class="card-title"><!--{{NAME}}--></div>
-    </div>
-    <div class="card-body">
-        <table class="card-attrs">
-            <tr>
-                <td>
-                    <!--{{COMPONENTS}}-->
-                    <br>
-                    <em>Components</em>
-                </td>
-                <td class="<!--{{CASTING_CLASS}}-->">
-                    <!--{{CASTING}}-->
-                    <br>
-                    <em><!--{{CASTING_LABEL}}--></em>
-                </td>
-                <td class="<!--{{RANGE_CLASS}}-->">
-                    <!--{{RANGE}}-->
-                    <br>
-                    <em><!--{{RANGE_LABEL}}--></em>
-                </td>
-                <td class="<!--{{DURATION_CLASS}}-->">
-                    <!--{{DURATION}}-->
-                    <br>
-                    <em><!--{{DURATION_LABEL}}--></em>
-                </td>
-            </tr>
-        </table>
-        <div class="card-attr-info">
-            <span class="card-material-components"><!--{{MATERIAL_COMPONENTS}}--></span>
-            <span class="card-duration-info"><!--{{DURATION_INFO}}--></span>
-        </div>
-        <div class="card-text">
-            <!--{{TEXT}}-->
+<div class="card card-single class-<!--{{SCHOOL}}-->">
+    <!-- One header at the top -->
+    <div class="card-header-group">
+        <div class="card-header">
+            <div class="card-title"><!--{{NAME}}--></div>
         </div>
     </div>
-    <div class="card-footer">
-        <span class="card-class"><!--{{PRIMARY_CLASS}}--> <!--{{SOURCE}}--></span>
-        <span class="card-type"><!--{{SPELL_TYPE}}--></span>
+
+    <!-- Single content area with one-column layout -->
+    <div class="card-content">
+        <div class="card-columns">
+            <table class="card-attrs">
+                <tr>
+                    <td>
+                        <!--{{COMPONENTS}}-->
+                        <br>
+                        <em>Components</em>
+                    </td>
+                    <td class="<!--{{CASTING_CLASS}}-->">
+                        <!--{{CASTING}}-->
+                        <br>
+                        <em><!--{{CASTING_LABEL}}--></em>
+                    </td>
+                    <td class="<!--{{RANGE_CLASS}}-->">
+                        <!--{{RANGE}}-->
+                        <br>
+                        <em><!--{{RANGE_LABEL}}--></em>
+                    </td>
+                    <td class="<!--{{DURATION_CLASS}}-->">
+                        <!--{{DURATION}}-->
+                        <br>
+                        <em><!--{{DURATION_LABEL}}--></em>
+                    </td>
+                </tr>
+            </table>
+            <div class="card-attr-info">
+                <span class="card-material-components"><!--{{MATERIAL_COMPONENTS}}--></span>
+                <span class="card-duration-info"><!--{{DURATION_INFO}}--></span>
+            </div>
+            <div class="card-text">
+                <!--{{TEXT}}-->
+            </div>
+        </div>
+    </div>
+
+    <!-- One footer at the bottom -->
+    <div class="card-footer-group">
+        <div class="card-footer">
+            <span class="card-class"><!--{{PRIMARY_CLASS}}--> <!--{{SOURCE}}--></span>
+            <span class="card-type"><!--{{SPELL_TYPE}}--></span>
+        </div>
     </div>
 </div>
