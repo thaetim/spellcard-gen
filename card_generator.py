@@ -179,9 +179,10 @@ def generate_spell_card(spell, card_single_template, card_double_template=None, 
                     text_part2 = None
     
     for proc_func in [colorize_text, apply_phrase_shorthands, sanitize_html]:
-        text_part1 = proc_func(text_part1)
-        if text_part2:
-            text_part2 = proc_func(text_part2) 
+        # text_part1 = proc_func(text_part1)
+        # if text_part2:
+        #     text_part2 = proc_func(text_part2) 
+        text = proc_func(text)
     
     primary_class = parse_classes(spell.get('Classes', '')).title()
     source = spell.get('Source', '')
@@ -213,7 +214,7 @@ def generate_spell_card(spell, card_single_template, card_double_template=None, 
         "DURATION_LABEL": duration_label,
         "MATERIAL_COMPONENTS": materials,
         "DURATION_INFO": "",
-        "TEXT": text_part1,
+        "TEXT": text,
         "SOURCE": source,
         "SPELL_TYPE": spell_type,
         "SCHOOL": school

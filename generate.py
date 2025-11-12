@@ -152,5 +152,3 @@ if __name__ == "__main__":
 # TODO: fix Tasha's Otherworldly Guise text
 # TODO: fix Arcane Lock attr labels overlaps (why do they even happen?)
 # TODO: better contrast damage type colors
-
-# maybe rework single card html template to use the same kinds of classes for elements - make the layout structure like in the multicards, just singular - then we can use the selectors more universally in the style.css and in font adjustment script
