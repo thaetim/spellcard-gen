@@ -18,14 +18,14 @@ def main():
         "page": base / "page.html",
         "card_single": base / "card-single.html",
         "card_double": base / "card-double.html",
-        "card_striple": base / "card-triple.html",
+        "card_triple": base / "card-triple.html",
         "js": base / "autosize.js",
         "out_html": Path("spell_cards.html"),
         "out_js": Path("autosize.js")
     }
 
-    css, page, card, card_double, card_striple, js = [
-        load_file(p) for p in (paths["css"], paths["page"], paths["card_single"], paths["card_double"], paths["card_striple"], paths["js"])
+    css, page, card_single, card_double, card_triple, js = [
+        load_file(p) for p in (paths["css"], paths["page"], paths["card_single"], paths["card_double"], paths["card_triple"], paths["js"])
     ]
 
     fixed_spells = load_fixed_spells(paths["fixed_csv"])
@@ -34,19 +34,18 @@ def main():
     print(f"Merged {len(spells_df)} → {len(merged_spells)} unique spells")
 
     broken_spell_texts = []
-    paired_cards = {}
     
     # Separate wide cards from single cards
-    wide_2_cards = []
-    wide_3_cards = []
-    single_cards = []
+    l_cards_double = []
+    l_cards_triple = []
+    l_cards_single = []
     
     def generate_and_track(spell):
         spell_name = spell['Name']
         if spell_name in fixed_spells:
             spell = fixed_spells[spell_name]
         
-        card_html = generate_spell_card(spell, card, paired_cards, card_double, card_striple)
+        card_html = generate_spell_card(spell, card_single, card_double, card_triple)
         
         text = spell.get('Text', '')
         info = detect_broken_elements(text)
@@ -65,11 +64,11 @@ def main():
     for spell in merged_spells:
         card_type, card_html = generate_and_track(spell)
         if card_type == 'wide_3':
-            wide_3_cards.append(card_html)
+            l_cards_triple.append(card_html)
         elif card_type == 'wide_2':
-            wide_2_cards.append(card_html)
+            l_cards_double.append(card_html)
         else:
-            single_cards.append(card_html)
+            l_cards_single.append(card_html)
     
     # Interleave for efficient printing:
     # - Triple-wide (3 slots) = full row, don't follow with anything
@@ -78,18 +77,18 @@ def main():
     single_idx = 0
     
     # Add all triple-wide cards first (they take full rows)
-    cards.extend(wide_3_cards)
+    cards.extend(l_cards_triple)
     
     # Then interleave double-wide with singles
-    for wide_card in wide_2_cards:
+    for wide_card in l_cards_double:
         cards.append(wide_card)
         # After each double-wide, add a single card if available
-        if single_idx < len(single_cards):
-            cards.append(single_cards[single_idx])
+        if single_idx < len(l_cards_single):
+            cards.append(l_cards_single[single_idx])
             single_idx += 1
     
     # Add remaining single cards at the end
-    cards.extend(single_cards[single_idx:])
+    cards.extend(l_cards_single[single_idx:])
     
     if broken_spell_texts:
         print(f"\nSpells needing manual description fix ({len(broken_spell_texts)}):")
