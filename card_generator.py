@@ -1,7 +1,7 @@
 """Spell card generation and formatting."""
 import re
 from html import escape
-from text_formatting import fix_text, sanitize_html, split_spell_size, apply_phrase_shorthands, fix_broken_line_breaks
+from text_formatting import fix_enumeration_formatting, sanitize_html, split_spell_size, apply_phrase_shorthands, fix_broken_line_breaks
 from spell_styling import colorize_text
 
 
@@ -130,6 +130,65 @@ def replace_placeholders(template, mapping):
         template = template.replace(f'<!--{{{{{k}}}}}-->', v)
     return template
 
+def move_multicol_tables_1(text, print_spell=None):
+        """Move multi-column HTML tables to the end of text."""
+        if not text:
+            return text
+        
+        # Extract multi-column tables and remove them from text
+        multi_col_tables = []
+        
+        def extract_multi_col_tables(match):
+            table = match.group(0)
+            # Check if this is a multi-column table (has multiple <td> tags in a row)
+            if re.search(r'<tr>.*?<td>.*?</td>.*?<td>', table, re.DOTALL):
+                multi_col_tables.append(table)
+                return ''  # Remove from original position
+            return table  # Keep single-column tables in place
+        
+        # Process text and extract multi-column tables
+        text_with_tables_processed = re.sub(
+            r'<table>.*?</table>', 
+            extract_multi_col_tables, 
+            text, 
+            flags=re.DOTALL
+        )
+        
+        # Add multi-column tables back at the end
+        if multi_col_tables:
+            return text_with_tables_processed + ''.join(multi_col_tables)
+        
+        return text_with_tables_processed
+
+def move_multicol_tables(text, print_spell=None):
+    """Move multi-column HTML tables to the end of text."""
+    if not text:
+        return text
+    
+    # Extract multi-column tables (tables with multiple <td> tags in a row)
+    multi_col_tables = []
+    single_col_tables = []
+    
+    # Find all tables
+    all_tables = re.findall(r'<table>.*?</table>', text, re.DOTALL)
+    
+    for table in all_tables:
+        # Check if table has multiple columns by looking for multiple <td> tags in a single <tr>
+        if re.search(r'<tr>.*?<td>.*?</td>.*?<td>', table, re.DOTALL):
+            multi_col_tables.append(table)
+        else:
+            single_col_tables.append(table)
+    
+    # Remove only multi-column tables from their original positions
+    text_without_multi_col_tables = text
+    for table in multi_col_tables:
+        text_without_multi_col_tables = text_without_multi_col_tables.replace(table, '', 1)
+    
+    # Add multi-column tables back at the end
+    if multi_col_tables:
+        return text_without_multi_col_tables + '<br><br>' + ''.join(multi_col_tables)
+    
+    return text_without_multi_col_tables
 
 def generate_spell_card(spell, card_templates):
     """Generate HTML for a spell card with optional continuation or wide cards."""
@@ -148,13 +207,16 @@ def generate_spell_card(spell, card_templates):
     text = spell.get('Text', '')
     hl = spell.get('At Higher Levels', '')
     
-    text = fix_text(text, spell['Name'])
-    hl = fix_text(hl)
+    text = fix_enumeration_formatting(text, spell['Name'])
+    hl = fix_enumeration_formatting(hl)
     
     if hl:
         hl = hl.replace('At Higher Levels.', '<b>At Higher Levels.</b>')
         text += "<br><br>" + hl
-    
+
+    # move multicolumn tables to the end of the text (easier to adjust font)
+    text = move_multicol_tables(text)
+
     text = re.sub(r'\.{2,}', '.', text)
     text = text.replace('<br><br>', '<br><span style="display: block; height: 0.5em;"></span>')
     text = fix_broken_line_breaks(text)

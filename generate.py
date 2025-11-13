@@ -56,44 +56,39 @@ def main():
         info = detect_broken_elements(text)
         if info and spell_name not in fixed_spells:
             broken_spell_texts.append((spell_name, info))
-        
-        # Determine card type by checking classes in output
-        if 'card-group-3' in card_html:
-            return ('wide_3', card_html)
-        elif 'card-group-2' in card_html:
-            return ('wide_2', card_html)
-        else:
-            return ('single', card_html)
+
+        return card_html
     
     # Generate all cards and categorize
     for spell in merged_spells:
-        card_type, card_html = generate_and_track(spell)
-        if card_type == 'wide_3':
+        card_html = generate_and_track(spell)
+        if 'card-triple' in card_html:
             l_cards_triple.append(card_html)
-        elif card_type == 'wide_2':
+        elif 'card-double' in card_html:
             l_cards_double.append(card_html)
         else:
             l_cards_single.append(card_html)
     
     # Interleave for efficient printing:
-    # - Triple-wide (3 slots) = full row, don't follow with anything
-    # - Double-wide (2 slots) + Single (1 slot) = full row
+    # - Triple-wide (3 slots) = full row
+    # - Double-wide (2 slots) + Single (1 slot) = full row  
+    # - Remaining singles fill final rows
     cards = []
-    single_idx = 0
     
     # Add all triple-wide cards first (they take full rows)
     cards.extend(l_cards_triple)
     
-    # Then interleave double-wide with singles
-    for wide_card in l_cards_double:
-        cards.append(wide_card)
-        # After each double-wide, add a single card if available
-        if single_idx < len(l_cards_single):
-            cards.append(l_cards_single[single_idx])
-            single_idx += 1
+    # Interleave doubles with singles (each double gets exactly one single)
+    num_pairs = min(len(l_cards_double), len(l_cards_single))
+    for i in range(num_pairs):
+        cards.append(l_cards_double[i])
+        cards.append(l_cards_single[i])
     
-    # Add remaining single cards at the end
-    cards.extend(l_cards_single[single_idx:])
+    # Add remaining doubles without singles
+    cards.extend(l_cards_double[num_pairs:])
+    
+    # Add remaining singles
+    cards.extend(l_cards_single[num_pairs:])
     
     if broken_spell_texts:
         print(f"\nSpells needing manual description fix ({len(broken_spell_texts)}):")
@@ -153,6 +148,3 @@ if __name__ == "__main__":
                 pass
     finally:
         keyboard.unhook_all()
-
-# TODO: ensure full card filled rows (a singleside card after every double card)
-# FIXME: bludgeoning, 2d3541; background-color: #2d354120; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">piercing, and slashing 

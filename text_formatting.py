@@ -7,7 +7,7 @@ RE_CAPITAL_SPLIT = re.compile(r'(?<![A-Z\s])(?=[A-Z])')
 RE_SENTENCE_END = re.compile(r'[.;]\s+')
 RE_WHITESPACE = re.compile(r'\s+')
 
-def fix_text(text, print_spell = None):
+def fix_enumeration_formatting(text, print_spell=None):
     """Fix enumeration spacing and formatting in spell text."""
     if not text: 
         return text
