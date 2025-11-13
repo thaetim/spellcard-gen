@@ -31,7 +31,7 @@ body {
     display: flex;
     flex-direction: column;
     border: 1pt solid var(--card-border, #000);
-    background: #e3e3e3;
+    background: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     page-break-inside: avoid;
     overflow: hidden;
@@ -456,17 +456,44 @@ body {
 }
 
 .x {
-    --acid: #00FF00;
-    --bludgeoning: #82755a;
-    --cold: #00FFFF;
-    --fire: #FF0000;
-    --force: #0000ff;
-    --lightning: #ffff00;
-    --necrotic: #000000;
-    --piercing: #5a6b82;
-    --poison: #800080;
-    --psychic: #ff3da4;
-    --radiant: #FFFFFF;
-    --slashing: #825a5a;
-    --thunder: #77825a;
+    --necrotic: #000;
+
+    --fire: #f00;
+    --acid: #0f0;
+    --force: #00f;
+    
+    --radiant: #ff0;
+    --poison: #f0f;
+    
+    --lightning: #f80;
+    --thunder: #0f8;
+    --psychic: #f08;
+    --cold: #08f;
+    
+    --bludgeoning: #88f;
+    --piercing: #f88;
+    --slashing: #8f8;
+}
+
+.y {
+    --a: #fff;
+    --a: #000;
+
+    --a: #f00;
+    --a: #0f0;
+    --a: #00f;
+    --a: #ff0;
+    --a: #0ff;
+    --a: #f0f;
+
+    --a: #f80;
+    --a: #0f8;
+    --a: #f08;
+    --a: #8f0;
+    --a: #08f;
+    --a: #80f;
+
+    --a: #f88;
+    --a: #8f8;
+    --a: #88f;
 }
