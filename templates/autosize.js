@@ -96,8 +96,8 @@ function calculateOptimalFontSize(card) {
     cardContent.style.display = 'block';
     
     // Font size boundaries
-    const absoluteMinFont = 4.5; // Absolute minimum for readability
-    let minFont = 6;
+    const absoluteMinFont = 6; // Absolute minimum for readability
+    let minFont = 7;
     let maxFont = 10;
     let bestFit = minFont;
 
