@@ -4,34 +4,61 @@ import re
 
 def blend_with_black(hex_color, blend_percent=50):
     """Blend a hex color with black by the given percentage."""
-    if not hex_color or hex_color.lower() == '#000000':
+    if not hex_color or hex_color == '#000':
         return hex_color
-    r, g, b = [int(hex_color[i:i+2], 16) for i in (1, 3, 5)]
+    
+    # Remove # and handle 3-digit shorthand
+    hex_color = hex_color.lstrip('#')
+    
+    # Convert 3-digit to 6-digit hex
+    if len(hex_color) == 3:
+        hex_color = ''.join(c * 2 for c in hex_color)
+    
+    # Convert to RGB
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    
+    # Blend with black
     factor = 1 - blend_percent / 100
-    return f'#{int(r*factor):02x}{int(g*factor):02x}{int(b*factor):02x}'
+    r_blended = round(r * factor)
+    g_blended = round(g * factor)
+    b_blended = round(b * factor)
+    
+    # Convert back to hex
+    return f"#{r_blended:02x}{g_blended:02x}{b_blended:02x}"
 
 
-# Damage type colors (50% blended with black)
+# Damage type colors
 DAMAGE_COLORS_BASE = {
-    'acid': '#00ff00',
-    'bludgeoning': '#82755a',
-    'cold': '#00ffff',
-    'fire': '#ff0000',
-    'force': '#0000ff',
-    'lightning': '#ffff00',
-    'necrotic': '#000000',
-    'piercing': '#5a6b82',
-    'poison': '#800080',
-    'psychic': '#ff3da4',
-    'radiant': '#ffffff',
-    'slashing': '#825a5a',
-    'thunder': '#77825a',
+    'necrotic': ('#000',''),
+
+    'fire': ('#f00',''),
+    'acid': ('#0f0',''),
+    'force': ('#00f',''),
+
+    'radiant': ('#ff0',''),
+    'NULL': ('#000','#ccc'),
+    'poison': ('#f0f',''),
+
+    'lightning': ('#f80',''),
+    'thunder': ('#0f8',''),
+    'psychic': ('#f08',''),
+    'cold': ('#08f',''),
+
+    'bludgeoning': ('#000','#88f'),
+    'slashing': ('#000','#8f8'),
+    'piercing': ('#000','#f88'),
 }
 
-DAMAGE_COLORS = {
-    damage_type: blend_with_black(color, 50) 
-    for damage_type, color in DAMAGE_COLORS_BASE.items()
-}
+
+DAMAGE_COLORS = {}
+for damage_type, colors in DAMAGE_COLORS_BASE.items():
+    color, bg_color = colors
+    DAMAGE_COLORS[damage_type] = (
+        blend_with_black(color, 75) if not bg_color else color,
+        f"{color}3" if not bg_color else bg_color
+    )
 
 def colorize_text(text):
     """
@@ -64,11 +91,11 @@ def colorize_text(text):
         # Color each damage type individually within the chain
         colored_chain = damage_chain
         for dmg_type in DAMAGE_COLORS.keys():
-            color = DAMAGE_COLORS[dmg_type]
+            color, bg_color = DAMAGE_COLORS[dmg_type]
             # Replace each damage type with a colored version
             colored_chain = re.sub(
                 rf'\b({re.escape(dmg_type)})\b',
-                rf'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">\1</span>',
+                rf'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">\1</span>',
                 colored_chain,
                 flags=re.IGNORECASE
             )
@@ -78,7 +105,8 @@ def colorize_text(text):
     text = re.sub(pattern_chain, replace_damage_chain, text, flags=re.IGNORECASE)
     
     # Step 2: Color dice expressions with damage type (handles "1d4 + 1 force" as one unit)
-    for damage_type, color in DAMAGE_COLORS.items():
+    for damage_type in DAMAGE_COLORS.keys():
+        color, bg_color = DAMAGE_COLORS[damage_type]
         pattern = rf'((?:\d+d\d+\s*\+\s*)*\d+d\d+(?:\s*\+\s*\d+)*)\s+({re.escape(damage_type)})(?:\s+damage)?'
         
         def replace_dice_damage(match):
@@ -87,12 +115,13 @@ def colorize_text(text):
             
             full_expr = match.group(1)
             damage_part = match.group(2)
-            return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{full_expr} {damage_part}</span>'
+            return f'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{full_expr} {damage_part}</span>'
         
         text = re.sub(pattern, replace_dice_damage, text, flags=re.IGNORECASE)
     
     # Step 3: Color plain number + damage type (like "1 force")
-    for damage_type, color in DAMAGE_COLORS.items():
+    for damage_type in DAMAGE_COLORS.keys():
+        color, bg_color = DAMAGE_COLORS[damage_type]
         pattern = rf'\b(\d+)\s+({re.escape(damage_type)})(?:\s+damage)?'
         
         def replace_num_damage(match):
@@ -112,7 +141,7 @@ def colorize_text(text):
             
             num_part = match.group(1)
             damage_part = match.group(2)
-            return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace; font-weight: bold;">{num_part} {damage_part}</span>'
+            return f'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{num_part} {damage_part}</span>'
         
         text = re.sub(pattern, replace_num_damage, text, flags=re.IGNORECASE)
     
@@ -133,8 +162,9 @@ def colorize_text(text):
             if re.match(rf'^\s*(?:(?:\+\s*(?:\d+|\d+d\d+)\s*)*){re.escape(dmg_type)}\b', after_text, re.IGNORECASE):
                 return dice_text
         
-        color = '#0000FF'
-        return f'<span style="color: {color}; background-color: {color}20; padding: 0 2px; border-radius: 2px; font-family: monospace;">{dice_text}</span>'
+        color, bg_color = DAMAGE_COLORS['NULL']
+        # color = blend_with_black(color, 50)
+        return f'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{dice_text}</span>'
     
     text = re.sub(r'\b\d+d\d+\b', color_standalone_dice, text)
     
