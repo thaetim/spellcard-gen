@@ -311,10 +311,10 @@ window.addEventListener('load', () => {
     setTimeout(() => waitForLayoutStable('body', autoSizeAll), 500);
 });
 
-window.addEventListener('resize', throttle(() => {
-    console.log('Window resized - recalculating fonts');
-    autoSizeAll();
-}, 600));
+// window.addEventListener('resize', throttle(() => {
+//     console.log('Window resized - recalculating fonts');
+//     autoSizeAll();
+// }, 600));
 
 // Export for manual triggering if needed
 window.triggerFontResize = autoSizeAll;

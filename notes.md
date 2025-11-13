@@ -4,3 +4,9 @@
 # TODO: splitting - Prismatic Wall, Pratfall, *Move Earth
 # TODO: damage type coloring - Magic Missile, Tidal Wave, Tenser's Tranformation, Wind Sprint
 # TODO: turn off word splits with '-'
+
+# TODO: fix damage type coloring on Tasha's Otherworldly Guise text
+# TODO: fix Arcane Lock attr labels overlaps (why do they even happen?)
+# TODO: Lunar Transfer i Octarine Spray font size
+# TODO: Lunar Transfer table
+# TODO: better contrast damage type colors
