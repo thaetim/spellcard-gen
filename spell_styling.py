@@ -1,6 +1,6 @@
 """Color styling utilities for spell cards."""
 import re
-
+from text_formatting import sanitize_html
 
 def blend_with_black(hex_color, blend_percent=50):
     """Blend a hex color with black by the given percentage."""
@@ -65,107 +65,151 @@ def colorize_text(text):
     Apply coloring to damage expressions:
     - "XdY [+ Z] damage_type" → colored together (e.g., "2d4 + 1 force")
     - "N damage_type" → colored together (e.g., "1 force")
-    - "DMG_TYPE damage" → colored (e.g., "fire damage")
-    - "DMG_TYPE(and|or|,)DMG_TYPE chains" → each colored individually (e.g., "acid, fire, cold, lightning, or poison damage")
+    - "DMG_TYPE damage" → colored (e.g., "fire damage")  <-- controlled by COLORIZE_UNDICED
+    - "DMG_TYPE(and|or|,)DMG_TYPE chains" → each colored individually
     - "XdY" alone → blue (e.g., "1d4 missiles")
     """
     if not text:
         return text
     
-    from text_formatting import sanitize_html
+    # Set this to True to also colorize damage-type phrases that are not explicitly
+    # preceded by a dice expression (e.g., "fire damage", "piercing or slashing damage").
+    COLORIZE_UNDICED = True
+
     text = sanitize_html(text)
-    
+
+    # Build damage types pattern from DAMAGE_COLORS keys
+    damage_types = list(DAMAGE_COLORS.keys())
+    damage_types_escaped = [re.escape(dt) for dt in damage_types]
+    damage_types_pattern = '|'.join(damage_types_escaped)
+
     # Step 1: Color damage type chains FIRST (e.g., "acid, fire, cold, lightning, or poison damage")
-    # Match at least 2 damage types separated by conjunctions, followed by " damage"
-    damage_types_pattern = '|'.join(re.escape(dmg_type) for dmg_type in DAMAGE_COLORS.keys())
-    pattern_chain = rf'\b({damage_types_pattern})(?:\s*,\s*(?:{damage_types_pattern}))+(?:\s*,?\s*(?:and|or)\s*(?:{damage_types_pattern}))?\s+damage\b'
-    
+    # Also matches patterns like "slashing or piercing damage" without commas
+    pattern_chain = rf'\b({damage_types_pattern})(?:(?:\s*,\s*|\s+(?:and|or)\s+)(?:{damage_types_pattern}))+(?:\s*,?\s*(?:and|or)\s*(?:{damage_types_pattern}))?\s+damage\b'
+
     def replace_damage_chain(match):
         full = match.group(0)
         if '<span' in full:
             return full
-        
-        # Extract the full damage chain (everything except " damage")
+
+        # Extract the chain without the trailing " damage"
         damage_chain = full.rsplit(' damage', 1)[0]
-        
-        # Color each damage type individually within the chain
+
         colored_chain = damage_chain
-        for dmg_type in DAMAGE_COLORS.keys():
+        for dmg_type in damage_types:
             color, bg_color = DAMAGE_COLORS[dmg_type]
-            # Replace each damage type with a colored version
             colored_chain = re.sub(
                 rf'\b({re.escape(dmg_type)})\b',
-                rf'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">\1</span>',
+                rf'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold; border: 1px solid #0003;">\1</span>',
                 colored_chain,
                 flags=re.IGNORECASE
             )
-        
+
         return f'{colored_chain} damage'
-    
-    text = re.sub(pattern_chain, replace_damage_chain, text, flags=re.IGNORECASE)
-    
+
+    # Apply chain coloring regardless of COLORIZE_UNDICED only if we want undiced coloring.
+    if COLORIZE_UNDICED:
+        text = re.sub(pattern_chain, replace_damage_chain, text, flags=re.IGNORECASE)
+    else:
+        # Still remove/skip already-colored chains to avoid double-coloring later:
+        # If an existing chain already contains a span, leave it alone (no substitution).
+        # (No-op here; keeping for clarity.)
+        pass
+
+    # Dice-sequence pattern allowing numeric modifiers as well (e.g., "+ 14")
+    dice_seq = r'(?:\s*\d+d\d+\s*(?:[+-]\s*(?:\d+d\d+|\d+)\s*)*)'
+
     # Step 2: Color dice expressions with damage type (handles "1d4 + 1 force" as one unit)
-    for damage_type in DAMAGE_COLORS.keys():
+    for damage_type in damage_types:
         color, bg_color = DAMAGE_COLORS[damage_type]
-        pattern = rf'((?:\d+d\d+\s*\+\s*)*\d+d\d+(?:\s*\+\s*\d+)*)\s+({re.escape(damage_type)})(?:\s+damage)?'
-        
+        pattern = rf'((?:\d+d\d+\s*(?:[+-]\s*(?:\d+d\d+|\d+)\s*)*))\s+({re.escape(damage_type)})(?:\s+damage)?'
+
         def replace_dice_damage(match):
             if '<span' in match.group(0):
                 return match.group(0)
-            
-            full_expr = match.group(1)
+            dice_part = match.group(1).strip()
             damage_part = match.group(2)
-            return f'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{full_expr} {damage_part}</span>'
-        
+            return (
+                f'<span style="color: {color}; background-color: {bg_color}; '
+                f'padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold; border: 1px solid #0003;">'
+                f'{dice_part} {damage_part}</span>'
+            )
+
         text = re.sub(pattern, replace_dice_damage, text, flags=re.IGNORECASE)
-    
+
     # Step 3: Color plain number + damage type (like "1 force")
-    for damage_type in DAMAGE_COLORS.keys():
+    for damage_type in damage_types:
         color, bg_color = DAMAGE_COLORS[damage_type]
         pattern = rf'\b(\d+)\s+({re.escape(damage_type)})(?:\s+damage)?'
-        
+
         def replace_num_damage(match):
             full = match.group(0)
             if '<span' in full:
                 return full
-            
+
             # Skip if preceded by 'd' (part of dice notation)
             start_pos = match.start()
-            if start_pos > 0 and text[start_pos - 1] == 'd':
+            if start_pos > 0 and text[start_pos - 1].lower() == 'd':
                 return full
-            
-            # Skip if preceded by '+' and whitespace (part of dice modifier already colored)
+
+            # Skip if preceded by '+' (likely part of a dice expression already handled)
             check_before = text[max(0, start_pos - 5):start_pos]
             if re.search(r'\+\s*$', check_before):
                 return full
-            
+
             num_part = match.group(1)
             damage_part = match.group(2)
-            return f'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{num_part} {damage_part}</span>'
-        
+            return (
+                f'<span style="color: {color}; background-color: {bg_color}; '
+                f'padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold; border: 1px solid #0003;">'
+                f'{num_part} {damage_part}</span>'
+            )
+
         text = re.sub(pattern, replace_num_damage, text, flags=re.IGNORECASE)
-    
-    # Step 4: Color standalone dice rolls (not followed by damage type)
+
+    # Step 4: Optionally color plain "DMG_TYPE damage" when COLORIZE_UNDICED is True
+    if COLORIZE_UNDICED:
+        for damage_type in damage_types:
+            color, bg_color = DAMAGE_COLORS[damage_type]
+            pattern = rf'\b({re.escape(damage_type)})\s+damage\b'
+
+            def replace_plain_damage(match):
+                full = match.group(0)
+                if '<span' in full:
+                    return full
+                dmg = match.group(1)
+                return (
+                    f'<span style="color: {color}; background-color: {bg_color}; '
+                    f'padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold; border: 1px solid #0003;">'
+                    f'{dmg}</span> damage'
+                )
+
+            text = re.sub(pattern, replace_plain_damage, text, flags=re.IGNORECASE)
+
+    # Step 5: Color standalone dice rolls (not followed by damage type)
     def color_standalone_dice(match):
         dice_text = match.group(0)
-        
-        # Check if already colored
+
+        # Avoid recoloring inside an already-open span
         start = match.start()
-        end = match.end()
-        window_before = text[max(0, start - 10):start]
+        window_before = text[max(0, start - 50):start]
         if '<span' in window_before and '</span>' not in window_before:
             return dice_text
-        
-        # Check if followed by + N (modifier) or + XdY then damage type
-        after_text = text[end:min(len(text), end + 100)]
-        for dmg_type in DAMAGE_COLORS.keys():
+
+        # Check if followed by modifiers and a damage type (already handled)
+        end = match.end()
+        after_text = text[end:end + 100]
+        for dmg_type in damage_types:
             if re.match(rf'^\s*(?:(?:\+\s*(?:\d+|\d+d\d+)\s*)*){re.escape(dmg_type)}\b', after_text, re.IGNORECASE):
                 return dice_text
-        
-        # color, bg_color = DAMAGE_COLORS['STANDALONE DICE ROLLS']
-        # color = blend_with_black(color, 50)
-        return f'<span style="color: #fff; background-color: var(--header-color); padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{dice_text}</span>'
-    
+
+        return (
+            f'<span style="color: #fff; background-color: var(--header-color); '
+            f'padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold; border: 1px solid #0003;">'
+            f'{dice_text}</span>'
+        )
+
     text = re.sub(r'\b\d+d\d+\b', color_standalone_dice, text)
-    
+
     return sanitize_html(text)
+
