@@ -48,7 +48,7 @@ function waitForLayoutStable(selector, callback, maxTries = 75) {
     }, 80);
 }
 
-// Comprehensive overflow detection
+// Comprehensive overflow detection with Range API and line-height awareness
 function isOverflowing(el) {
     if (!el) return false;
     
@@ -56,17 +56,30 @@ function isOverflowing(el) {
     const rect = el.getBoundingClientRect();
     const computedStyle = window.getComputedStyle(el);
     
-    // Check height overflow with multiple methods
+    // Method 1: Check height overflow with scroll comparison
     const clientHeight = Math.floor(rect.height);
     const scrollHeight = Math.floor(el.scrollHeight);
     const heightOverflow = scrollHeight > clientHeight + 1; // 1px tolerance
     
-    // Check width overflow
+    // Method 2: Check width overflow
     const clientWidth = Math.floor(rect.width);
     const scrollWidth = Math.floor(el.scrollWidth);
     const widthOverflow = scrollWidth > clientWidth + 1;
     
-    // Special handling for multi-column layouts
+    // Method 3: Range API for actual text content measurement (more accurate)
+    let textOverflows = false;
+    try {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const textRect = range.getBoundingClientRect();
+        // Check if actual text content exceeds container
+        textOverflows = textRect.height > clientHeight + 1 || textRect.width > clientWidth + 1;
+    } catch (e) {
+        // Fallback to scroll method if Range API fails
+        textOverflows = false;
+    }
+    
+    // Method 4: Special handling for multi-column layouts
     const isMultiColumn = computedStyle.columnCount !== 'auto' && 
                          parseInt(computedStyle.columnCount) > 1;
     
@@ -77,10 +90,19 @@ function isOverflowing(el) {
         const estimatedContentWidth = (scrollWidth * parseInt(computedStyle.columnCount)) + (columnGap * (parseInt(computedStyle.columnCount) - 1));
         const columnOverflow = estimatedContentWidth > clientWidth;
         
-        return heightOverflow || widthOverflow || columnOverflow;
+        return heightOverflow || widthOverflow || columnOverflow || textOverflows;
     }
     
-    return heightOverflow || widthOverflow;
+    // Method 5: Line height awareness - check if we have more lines than fit
+    const lineHeight = parseFloat(computedStyle.lineHeight);
+    let lineOverflow = false;
+    if (lineHeight && lineHeight > 0 && !isNaN(lineHeight)) {
+        const maxLines = Math.floor(clientHeight / lineHeight);
+        const actualLines = Math.ceil(scrollHeight / lineHeight);
+        lineOverflow = actualLines > maxLines;
+    }
+    
+    return heightOverflow || widthOverflow || textOverflows || lineOverflow;
 }
 
 // Robust font size calculation with fallbacks
@@ -96,9 +118,10 @@ function calculateOptimalFontSize(card) {
     cardContent.style.display = 'block';
     
     // Font size boundaries
-    const absoluteMinFont = 6; // Absolute minimum for readability
+    const absoluteMinFont = 6.5; // Absolute minimum for readability
+    const absoluteMinTableFont = 4; // Absolute minimum for tables
     let minFont = 7;
-    let maxFont = 10;
+    let maxFont = 11; // Increase max to allow larger text
     let bestFit = minFont;
 
     try {
@@ -171,7 +194,7 @@ function calculateOptimalFontSize(card) {
 
         // Apply safety margin if we found a working size
         if (!isOverflowing(cardContent)) {
-            const safetyMargin = 0.15;
+            const safetyMargin = 0.10; // Reduced safety margin for tighter fit
             const safeSize = Math.max(bestFit - safetyMargin, absoluteMinFont);
             cardContent.style.fontSize = safeSize + "pt";
             forceReflow(cardContent);
@@ -201,6 +224,9 @@ function forceReflow(element) {
 }
 
 function applyFontSizeToCard(card, fontSize) {
+    const absoluteMinFont = 6.5;
+    const absoluteMinTableFont = 4;
+    
     const cardContent = card.querySelector('.card-content');
     if (cardContent) {
         cardContent.style.fontSize = fontSize.toFixed(2) + "pt";
@@ -216,7 +242,7 @@ function applyFontSizeToCard(card, fontSize) {
         if (isOverflowing(cardContent)) {
             let tableFontSize = fontSize;
             // First try shrinking tables independently
-            while (isOverflowing(cardContent) && tableFontSize > 4.5 && tables.length > 0) {
+            while (isOverflowing(cardContent) && tableFontSize > absoluteMinTableFont && tables.length > 0) {
                 tableFontSize -= 0.1;
                 tables.forEach(table => {
                     table.style.fontSize = tableFontSize.toFixed(2) + "pt";
@@ -228,7 +254,7 @@ function applyFontSizeToCard(card, fontSize) {
             if (isOverflowing(cardContent)) {
                 console.warn(`Card STILL overflowing at ${fontSize.toFixed(2)}pt - applying emergency fix`);
                 let emergencySize = fontSize;
-                while (isOverflowing(cardContent) && emergencySize > 4.5) {
+                while (isOverflowing(cardContent) && emergencySize > absoluteMinFont) {
                     emergencySize -= 0.1;
                     cardContent.style.fontSize = emergencySize.toFixed(2) + "pt";
                     tables.forEach(table => {
