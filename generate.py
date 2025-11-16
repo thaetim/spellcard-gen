@@ -12,7 +12,7 @@ def load_file(path):
 def main():
     base = Path("templates")
     paths = {
-        "csv": Path("Spells-various.csv"),
+        "csv": Path("Spells-many.csv"),
         "fixed_csv": Path("data/Spells-fixed.csv"),
         "css": base / "style.css",
         "page": base / "page.html",
@@ -45,7 +45,6 @@ def main():
         if spell_name in fixed_spells:
             spell = fixed_spells[spell_name]
         
-
         card_html = generate_spell_card(spell, {
             'single': card_single,
             'double': card_double,
@@ -156,4 +155,5 @@ if __name__ == "__main__":
 # TODO: Lunar Transfer table
 # TODO: better contrast damage type colors
 # TODO: no dmg type coloring in Animate Objects
-# TODO: Greater Restoration tablelist should not move; also the last row isn't parsed, treated as normal text
+
+# TODO # DEV print test

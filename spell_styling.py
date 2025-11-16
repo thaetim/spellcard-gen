@@ -46,9 +46,9 @@ DAMAGE_COLORS_BASE = {
     'psychic': ('#f08',''),
     'cold': ('#08f',''),
 
-    'bludgeoning': ('#000','#88f4'),
-    'slashing': ('#000','#8f84'),
-    'piercing': ('#000','#f884'),
+    'bludgeoning': ('#000','#88f2'),
+    'slashing': ('#000','#8f82'),
+    'piercing': ('#000','#f882'),
 }
 
 

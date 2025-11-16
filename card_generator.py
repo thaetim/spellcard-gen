@@ -1,7 +1,7 @@
 """Spell card generation and formatting."""
 import re
 from html import escape
-from text_formatting import fix_enumeration_formatting, sanitize_html, split_spell_size, apply_phrase_shorthands, fix_broken_line_breaks
+from text_formatting import fix_enumeration_formatting, sanitize_html, resolve_spell_size, apply_phrase_shorthands, fix_broken_line_breaks
 from spell_styling import colorize_text
 
 
@@ -212,7 +212,7 @@ def generate_spell_card(spell, card_templates):
     
     if hl:
         hl = hl.replace('At Higher Levels.', '<b>At Higher Levels.</b>')
-        text += "<br><br>" + hl
+        text += "<br>" + hl
 
     # move multicolumn tables to the end of the text (easier to adjust font)
     text = move_multicol_tables(text)
@@ -264,4 +264,5 @@ def generate_spell_card(spell, card_templates):
         if key not in ["TEXT", "SPELL_TYPE"]:
             mapping[key] = escape(str(value))
 
-    return replace_placeholders(card_templates[split_spell_size(text)], mapping)
+    card_type = resolve_spell_size(text)
+    return replace_placeholders(card_templates[card_type], mapping)
