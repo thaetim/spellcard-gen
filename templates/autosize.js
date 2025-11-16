@@ -206,17 +206,40 @@ function applyFontSizeToCard(card, fontSize) {
         cardContent.style.fontSize = fontSize.toFixed(2) + "pt";
         forceReflow(cardContent);
         
-        // Final verification
+        // Set table font size to be equal to or smaller than main text
+        const tables = cardContent.querySelectorAll('.card-text table');
+        tables.forEach(table => {
+            table.style.fontSize = fontSize.toFixed(2) + "pt";
+        });
+        
+        // Final verification - if still overflowing, shrink tables first
         if (isOverflowing(cardContent)) {
-            console.warn(`Card STILL overflowing at ${fontSize.toFixed(2)}pt - applying emergency fix`);
-            // Apply immediate fix
-            let emergencySize = fontSize;
-            while (isOverflowing(cardContent) && emergencySize > 4.5) {
-                emergencySize -= 0.1;
-                cardContent.style.fontSize = emergencySize.toFixed(2) + "pt";
+            let tableFontSize = fontSize;
+            // First try shrinking tables independently
+            while (isOverflowing(cardContent) && tableFontSize > 4.5 && tables.length > 0) {
+                tableFontSize -= 0.1;
+                tables.forEach(table => {
+                    table.style.fontSize = tableFontSize.toFixed(2) + "pt";
+                });
                 forceReflow(cardContent);
             }
-            return emergencySize;
+            
+            // If still overflowing after shrinking tables, shrink everything
+            if (isOverflowing(cardContent)) {
+                console.warn(`Card STILL overflowing at ${fontSize.toFixed(2)}pt - applying emergency fix`);
+                let emergencySize = fontSize;
+                while (isOverflowing(cardContent) && emergencySize > 4.5) {
+                    emergencySize -= 0.1;
+                    cardContent.style.fontSize = emergencySize.toFixed(2) + "pt";
+                    tables.forEach(table => {
+                        // Tables should never be larger than main text
+                        const currentTableSize = parseFloat(table.style.fontSize);
+                        table.style.fontSize = Math.min(currentTableSize, emergencySize).toFixed(2) + "pt";
+                    });
+                    forceReflow(cardContent);
+                }
+                return emergencySize;
+            }
         }
     }
     return fontSize;
