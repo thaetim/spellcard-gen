@@ -92,7 +92,7 @@ def estimate_text_length(text):
     """Estimate text length without HTML tags."""
     return len(RE_HTML_TAGS.sub('', text or ''))
 
-def split_spell_size(text, target_length=800):
+def resolve_spell_size(text, target_length=800):
     """Return 1, 2, or 3 indicating how many parts split_spell_text would produce.
 
     Heuristic mirrors original splitting logic:
@@ -344,6 +344,7 @@ def apply_phrase_shorthands(text):
         r'\bdisadvantage\b': 'disadv.',
         r'\bcritical hit\b': 'crit',
         r'__INSET_0__': '',
+        r'\.\.': '.',
     }
 
     # Dice-sequence pattern that allows:
@@ -365,5 +366,13 @@ def apply_phrase_shorthands(text):
     # Apply the other global replacements case-insensitively
     for pattern, replacement in PHRASE_SHORTHANDS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+    # Boldify in-text semititles (handles Title Case sentences like "Red.", "On Target.")
+    # Only matches after sentence boundaries (start of text, after period/!/?/, or after <br/>)
+    # This prevents bolding mid-sentence phrases like "Material Plane."
+    bold_sent_pat = re.compile(r'((?:^|(?<=[.!?])\s+|<br/>))([A-Z][a-z]*(?:\s+[A-Z][a-z]*)*)\.\s')
+    def bold_repl(m):
+        return f"{m.group(1)}<b>{m.group(2)}</b>. "
+    text = bold_sent_pat.sub(bold_repl, text)
 
     return text
