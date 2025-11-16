@@ -69,17 +69,21 @@ def fix_broken_line_breaks(text):
     if not text:
         return text
     
-    text = re.sub(r'</br>', '<br/>', text)
-    text = re.sub(
-        r'<span[^>]*>([^<]*)</br>([^<]*)</span>', 
-        r'<span style="display: block; height: 0.5em;"></span><span>\1<br/>\2</span>', 
-        text
-    )
-    text = re.sub(
-        r'<span[^>]*display:\s*block[^>]*>.*?</br>', 
-        '<span style="display: block; height: 0.5em;"></span>', 
-        text
-    )
+    for pattern, repl in {
+        r'<br/>': '<br>',
+        r'</br>': '<br>',
+        r'<br><br>': '<br>',
+        r'<span[^>]*>([^<]*)<br>([^<]*)</span>': r'<span style="display: block; height: 0.5em;"></span><span>\1<br/>\2</span>', 
+        r'<br><span style="display: block; height: 0.5em;"></span><br><table': '<span style="display: block; height: 0.5em;"></span><table'
+    }.items():
+        text = re.sub(pattern, repl, text)
+
+    single = '<span style="display: block; height: 0.5em;"></span>'
+    # pattern: match the span, then (?:\s*same span)* to catch repeats with optional whitespace/newlines
+    pattern = re.compile(r'(?:' + re.escape(single) + r')(?:\s*(?:' + re.escape(single) + r'))+', flags=re.IGNORECASE)
+    # collapse repeats to a single span
+    text = pattern.sub(single, text)
+
     
     return text
 
