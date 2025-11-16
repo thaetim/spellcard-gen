@@ -38,7 +38,7 @@ DAMAGE_COLORS_BASE = {
     'force': ('#00f',''),
 
     'radiant': ('#ff0',''),
-    'NULL': ('#000','#ccc'),
+    'STANDALONE DICE ROLLS': ('#000','#000'),
     'poison': ('#f0f',''),
 
     'lightning': ('#f80',''),
@@ -46,9 +46,9 @@ DAMAGE_COLORS_BASE = {
     'psychic': ('#f08',''),
     'cold': ('#08f',''),
 
-    'bludgeoning': ('#000','#88f'),
-    'slashing': ('#000','#8f8'),
-    'piercing': ('#000','#f88'),
+    'bludgeoning': ('#000','#88f4'),
+    'slashing': ('#000','#8f84'),
+    'piercing': ('#000','#f884'),
 }
 
 
@@ -162,9 +162,9 @@ def colorize_text(text):
             if re.match(rf'^\s*(?:(?:\+\s*(?:\d+|\d+d\d+)\s*)*){re.escape(dmg_type)}\b', after_text, re.IGNORECASE):
                 return dice_text
         
-        color, bg_color = DAMAGE_COLORS['NULL']
+        # color, bg_color = DAMAGE_COLORS['STANDALONE DICE ROLLS']
         # color = blend_with_black(color, 50)
-        return f'<span style="color: {color}; background-color: {bg_color}; padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{dice_text}</span>'
+        return f'<span style="color: #fff; background-color: var(--header-color); padding: 0 2px; border-radius: 2px; font-family: Courier; font-weight: bold;">{dice_text}</span>'
     
     text = re.sub(r'\b\d+d\d+\b', color_standalone_dice, text)
     

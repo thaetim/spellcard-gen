@@ -288,8 +288,11 @@ def split_spell_text(text, target_length=800, max_parts=3):
 
 
 def apply_phrase_shorthands(text):
-    """Apply abbreviations to common D&D phrases."""
-    PHRASE_SHORTHANDS = {
+    """Apply abbreviations to common D&D phrases. Damage-type words are
+    replaced only when preceded by a dice roll (e.g., '1d8 fire' or
+    '2d6 + 14 cold'). Supports dice sequences with optional +/− numeric modifiers."""
+    # Damage-type replacements — only when preceded by a dice sequence
+    damage_patterns = {
         r'\bacids?\s+damage\b': 'acid',
         r'\bbludgeonings?\s+damage\b': 'bludgeoning',
         r'\bcolds?\s+damage\b': 'cold',
@@ -303,6 +306,10 @@ def apply_phrase_shorthands(text):
         r'\bradiants?\s+damage\b': 'radiant',
         r'\bslashings?\s+damage\b': 'slashing',
         r'\bthunders?\s+damage\b': 'thunder',
+    }
+
+    # Other global shorthand replacements (applied anywhere)
+    PHRASE_SHORTHANDS = {
         r'\bchallenge\s+ratings?\b': 'CR',
         r'\barmor\s+class\b': 'AC',
         r'\btemporary\s+hitpoints?\b': 'temp. HP',
@@ -324,8 +331,25 @@ def apply_phrase_shorthands(text):
         r'\bcritical hit\b': 'crit',
         r'__INSET_0__': '',
     }
-    
+
+    # Dice-sequence pattern that allows:
+    # - one or more dice terms: \d+d\d+
+    # - optionally followed by zero or more "+ 3d6" or "- 14" style modifiers
+    # This merges your broader modifier support so flat integers like "+ 14" are allowed.
+    dice_seq = r'(?:\s*\d+d\d+\s*(?:[+-]\s*(?:\d+d\d+|\d+)\s*)*)'
+
+    # For each damage pattern, only replace when it is immediately preceded by a dice sequence.
+    # We capture the dice sequence and replace the whole match with "dice-seq <abbr>".
+    for pattern, replacement in damage_patterns.items():
+        combined_re = re.compile(r'(' + dice_seq + r')' + r'(' + pattern + r')', flags=re.IGNORECASE)
+        def _repl(m):
+            # Preserve original spacing of the captured dice sequence, then append a single space + replacement
+            dice_part = m.group(1).rstrip()
+            return dice_part + ' ' + replacement
+        text = combined_re.sub(_repl, text)
+
+    # Apply the other global replacements case-insensitively
     for pattern, replacement in PHRASE_SHORTHANDS.items():
-        text = re.sub(pattern, replacement, text)
-    
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
     return text
