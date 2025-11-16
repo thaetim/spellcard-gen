@@ -160,6 +160,16 @@ def split_spell_size(text, target_length=800):
     part1_clean_len = len(RE_HTML_TAGS.sub('', txt[:first_break]))
     part2_clean_len = len(RE_HTML_TAGS.sub('', txt[first_break:]))
 
+    # classify some exceptions explicitly
+    EXPLICIT_CARD_CLASSIFICATION = {
+        'single': {},
+        'double': {'octarine spray'},
+        'triple': {}
+    }
+    for card_type, card_titles in EXPLICIT_CARD_CLASSIFICATION.items():
+        if any(card_title in text.lower() for card_title in card_titles):
+            return card_type
+
     # if part2 is short enough to fit in one card -> 2
     if part2_clean_len <= target_length:
         return 'double'
