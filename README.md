@@ -77,7 +77,7 @@ This workflow enables rapid iteration on card styling, text formatting, and spel
 Go to [5e.tools Spells Table](https://2014.5e.tools/spells.html). To get the list of spells relevant for you, you can:
 
 - Utilities / Load All Partnered Content
-- Utilities / Homebrew Manager > Get Homebrew (blue button) > Select desired > Add Selected (blue download button)
+- Utilities / Homebrew Manager > Get Homebrew (blue button) > Select desired > Add Selected (blue ⤓ download button)
 - Adjust the Filters
 - Pin the spells to a list (shortcut: press `P`); Note that this takes precedence over the filtered list of spells in the Table view
 
