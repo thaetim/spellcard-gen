@@ -6,6 +6,8 @@ Generates printable D&D 5e spell cards from CSV data exported from 5e.tools Tabl
 
 This tool converts spell data into professionally formatted, print-ready spell cards. It automatically processes spell text, applies abbreviations, colorizes damage types, and intelligently sizes cards based on content length (single, double, or triple width).
 
+![alt text](assets/image.png)
+
 ## Features
 
 - **Automatic card sizing**: Single, double, or triple-width cards based on text length
@@ -67,6 +69,23 @@ Go to [5e.tools Spells Table](https://2014.5e.tools/spells.html). To get the lis
 
 When you have the list ready either (filtered or pinned) open the Table View > Export to CSV.
 Finally, place your spell CSV in the root directory (default: `Spells.csv`).
+
+### Sampling for Large Lists
+
+By default, if your CSV contains more than **200 spells**, the script generates only a **sample of 69 spells** to speed up development. The sample includes:
+- All spells matching specific test phrases (defined in `N_SAMPLE_PHRASES` in `spell_processing.py`)
+- Random spells to fill up to 69 total
+
+**To generate all spells**, edit `spell_processing.py` and change:
+```python
+N_SAMPLE_THRESH = 200
+```
+to a large number like:
+```python
+N_SAMPLE_THRESH = 999999
+```
+
+> **⚠️ Warning**: Generating large spell lists (200+ spells) can cause the browser's font autosizing JavaScript to take several minutes to complete. The HTML file will load, but text may appear unsized until the script finishes processing all cards.
 
 ### Manual Corrections: `data/Spells-fixed.csv`
 Contains manually corrected spell data to override automatic processing. The script checks this file first for each spell. See [DATA_MANIPULATION.md](DATA_MANIPULATION.md) for details on available manipulations.
