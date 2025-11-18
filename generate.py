@@ -102,21 +102,21 @@ def main():
     print(f"Exported {len(cards)} cards to {paths['out_html']}")
 
 if __name__ == "__main__":
-    # DEBUG #
-    import os
-    from pathlib import Path
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Script location: {__file__}")
+    # # DEBUG #
+    # import os
+    # from pathlib import Path
+    # print(f"Current working directory: {os.getcwd()}")
+    # print(f"Script location: {__file__}")
     
-    if hasattr(sys, '_MEIPASS'):
-        print(f"MEIPASS location: {sys._MEIPASS}")
-        base_path = Path(sys._MEIPASS)
-    else:
-        base_path = Path(__file__).parent
+    # if hasattr(sys, '_MEIPASS'):
+    #     print(f"MEIPASS location: {sys._MEIPASS}")
+    #     base_path = Path(sys._MEIPASS)
+    # else:
+    #     base_path = Path(__file__).parent
     
-    print(f"Base path: {base_path}")
-    print(f"templates/style.css exists: {(base_path / 'templates' / 'style.css').exists()}")
-    ##
+    # print(f"Base path: {base_path}")
+    # print(f"templates/style.css exists: {(base_path / 'templates' / 'style.css').exists()}")
+    # ##
 
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Spellcard Generator')
