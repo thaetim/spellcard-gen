@@ -99,7 +99,8 @@ to a large number like:
 N_SAMPLE_THRESH = 999999
 ```
 
-> **⚠️ Warning**: Generating large spell lists (200+ spells) can cause the browser's font autosizing JavaScript to take several minutes to complete. The HTML file will load, but text may appear unsized until the script finishes processing all cards.
+> [!WARNING]
+> Generating large spell lists (200+ spells) can cause the browser's font autosizing JavaScript to take several minutes to complete. The HTML file will load, but text may appear unsized until the script finishes processing all cards.
 
 ### Manual Corrections: `data/Spells-fixed.csv`
 Contains manually corrected spell data to override automatic processing. The script checks this file first for each spell. See [DATA_MANIPULATION.md](DATA_MANIPULATION.md) for details on available manipulations.
