@@ -155,5 +155,6 @@ if __name__ == "__main__":
 # TODO: Lunar Transfer table
 # TODO: better contrast damage type colors
 # TODO: no dmg type coloring in Animate Objects
+# TODO: Druid Grove vs. Augury "►" listings
 
 # TODO # DEV print test
