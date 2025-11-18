@@ -6,7 +6,7 @@ Generates printable D&D 5e spell cards from CSV data exported from 5e.tools Tabl
 
 This tool converts spell data into professionally formatted, print-ready spell cards. It automatically processes spell text, applies abbreviations, colorizes damage types, and intelligently sizes cards based on content length (single, double, or triple width).
 
-![alt text](assets/image.png)
+![preview](assets/preview.png)
 
 ## Features
 
@@ -27,6 +27,9 @@ The attribute table shows spell properties with context-aware labeling:
 - **Concentration spells**: "Concentration" badge replaces "Duration" label
 - **Ritual spells**: "or Ritual" badge replaces "Casting Time" label  
 - **Area effects**: Range shows area type (e.g., "Self Radius", "Touch Cone") instead of generic "Range"
+
+![attr-display-ritual](assets/attr-display-ritual.png)
+![attr-display-range](assets/attr-display-range.png)
 
 This reduces visual clutter while highlighting important spell properties at a glance.
 
