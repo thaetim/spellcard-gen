@@ -12,7 +12,7 @@ def load_file(path):
 def main():
     base = Path("templates")
     paths = {
-        "csv": Path("Spells-many.csv"),
+        "csv": Path("Spells.csv"),
         "fixed_csv": Path("data/Spells-fixed.csv"),
         "css": base / "style.css",
         "page": base / "page.html",
