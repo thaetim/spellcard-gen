@@ -11,6 +11,7 @@ This tool converts spell data into professionally formatted, print-ready spell c
 ## Features
 
 - **Automatic card sizing**: Single, double, or triple-width cards based on text length
+- **Smart attribute display**: Special spell properties (Concentration, Ritual, area effects) shown as badges instead of generic labels
 - **Smart text formatting**: Enumerations converted to tables, broken line breaks fixed
 - **Damage type colorization**: Damage types highlighted in color
 - **Abbreviations**: Common D&D terms shortened (HP, AC, CR, etc.)
@@ -18,6 +19,16 @@ This tool converts spell data into professionally formatted, print-ready spell c
 - **Manual overrides**: `data/Spells-fixed.csv` for correcting problematic spells
 - **Live reloading**: Auto-regenerate on file changes with `runwatch.py`
 - **Print optimization**: Cards arranged for efficient printing (triple cards use full rows, doubles paired with singles)
+
+### Smart Attribute Display
+
+The attribute table shows spell properties with context-aware labeling:
+
+- **Concentration spells**: "Concentration" badge replaces "Duration" label
+- **Ritual spells**: "or Ritual" badge replaces "Casting Time" label  
+- **Area effects**: Range shows area type (e.g., "Self Radius", "Touch Cone") instead of generic "Range"
+
+This reduces visual clutter while highlighting important spell properties at a glance.
 
 ## Usage
 
