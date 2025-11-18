@@ -81,7 +81,7 @@ Go to [5e.tools Spells Table](https://2014.5e.tools/spells.html). To get the lis
 - Adjust the Filters
 - Pin the spells to a list (shortcut: press `P`); Note that this takes precedence over the filtered list of spells in the Table view
 
-When you have the list ready either (filtered or pinned) open the Table View > Export to CSV.
+When you have the list ready (either filtered or pinned) open the Table View > Export to CSV.
 Finally, place your spell CSV in the root directory (default: `Spells.csv`).
 
 ### Sampling for Large Lists
