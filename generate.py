@@ -2,6 +2,7 @@
 import argparse
 import keyboard
 import sys
+import pandas as pd
 from card_generator import generate_spell_card
 from spell_processing import load_spells, merge_spell_duplicates, load_fixed_spells, detect_broken_elements
 from pathlib import Path
@@ -29,9 +30,11 @@ def get_base_path():
 def get_exe_directory():
     """Get the directory where the EXE is located (or script directory).
     This is where user-provided files like Spells.csv should be placed."""
-    if hasattr(sys, '_MEIPASS'):
-        # Running as compiled EXE - sys.argv[0] points to the original EXE location
-        return Path(sys.argv[0]).parent.absolute()
+    # Always use the directory where the exe/script is actually located
+    # sys.executable for compiled exe, __file__ for script
+    if getattr(sys, 'frozen', False):
+        # Running as compiled EXE (PyInstaller sets sys.frozen)
+        return Path(sys.executable).parent.absolute()
     else:
         # Running as script - use script's directory
         return Path(__file__).parent.absolute()
@@ -42,6 +45,8 @@ def get_csv_path(csv_path_arg=None):
     Priority:
     1. File dragged onto EXE (csv_path_arg)
     2. Spells.csv in the same folder as EXE
+    
+    Returns None if CSV not found.
     """
     exe_dir = get_exe_directory()
 
@@ -51,11 +56,125 @@ def get_csv_path(csv_path_arg=None):
         if csv_path.exists():
             return csv_path
         else:
-            print(f"Warning: Specified CSV file not found: {csv_path}")
-            print(f"Falling back to default location...")
+            return None
 
     # Default: Spells.csv in the same folder as EXE
-    return exe_dir / "Spells.csv"
+    default_csv = exe_dir / "Spells.csv"
+    if default_csv.exists():
+        return default_csv
+    
+    return None
+
+
+def validate_csv(csv_path):
+    """Validate CSV file structure and content.
+    Returns (is_valid, error_messages) tuple.
+    """
+    errors = []
+    
+    try:
+        # Try to read the CSV
+        df = pd.read_csv(csv_path, encoding='utf-8')
+    except UnicodeDecodeError:
+        errors.append("File encoding error: CSV must be UTF-8 encoded")
+        return False, errors
+    except pd.errors.EmptyDataError:
+        errors.append("CSV file is empty")
+        return False, errors
+    except Exception as e:
+        errors.append(f"Failed to read CSV: {str(e)}")
+        return False, errors
+    
+    # Check for required columns
+    required_columns = ['Name', 'Level', 'School', 'Casting Time', 'Range', 'Components', 'Duration', 'Text']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    
+    if missing_columns:
+        errors.append(f"Missing required columns: {', '.join(missing_columns)}")
+        errors.append(f"Found columns: {', '.join(df.columns.tolist())}")
+        return False, errors
+    
+    # Check if CSV has any data
+    if len(df) == 0:
+        errors.append("CSV file contains no spell data")
+        return False, errors
+    
+    # Check for critical empty fields
+    critical_fields = ['Name', 'Level', 'School']
+    for field in critical_fields:
+        null_count = df[field].isna().sum()
+        if null_count > 0:
+            errors.append(f"Warning: {null_count} spells have missing '{field}' field")
+    
+    # Check for newlines and proper quoting in CSV
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            csv_content = f.read()
+        
+        # Check if there are unquoted newlines (newlines outside of quoted fields)
+        lines = csv_content.split('\n')
+        expected_columns = len(df.columns)
+        
+        # Read raw CSV to check for quoting issues
+        import csv
+        quote_issues = []
+        with open(csv_path, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.reader(f)
+            header = next(reader)  # Skip header
+            row_num = 2  # Start from row 2 (after header)
+            
+            for row in reader:
+                # Check if row has correct number of columns
+                if len(row) != expected_columns:
+                    quote_issues.append(
+                        f"Row {row_num}: Has {len(row)} columns, expected {expected_columns}. "
+                        f"This may indicate unquoted newlines or commas in cell values."
+                    )
+                
+                # Check for newlines in values
+                for col_idx, cell in enumerate(row):
+                    if cell and '\n' in cell:
+                        # This is fine - newlines are allowed in quoted fields
+                        pass
+                
+                row_num += 1
+        
+        if quote_issues:
+            errors.append("CSV formatting issues (unquoted newlines or commas):")
+            errors.extend(quote_issues[:5])  # Show first 5 issues
+            if len(quote_issues) > 5:
+                errors.append(f"... and {len(quote_issues) - 5} more formatting issues")
+            errors.append("\nTip: Fields containing commas or newlines must be enclosed in double quotes.")
+    except Exception as e:
+        # Don't fail validation on this check, just warn
+        pass
+    
+    # Check data types
+    try:
+        # Level should be: "Cantrip", a number (0-9), or ordinal (1st, 2nd, 3rd, etc.)
+        level_issues = []
+        for idx, val in df['Level'].items():
+            if pd.notna(val):
+                val_str = str(val).strip()
+                # Check if valid: Cantrip, digit(s), or ordinal (1st, 2nd, 3rd, 4th, etc.)
+                if not (val_str.lower() == 'cantrip' or 
+                        val_str.isdigit() or 
+                        (val_str[-2:] in ['st', 'nd', 'rd', 'th'] and val_str[:-2].isdigit())):
+                    level_issues.append(f"Row {idx + 2}: Invalid level '{val}'")
+        
+        if level_issues:
+            errors.append("Level field issues:")
+            errors.extend(level_issues[:5])  # Show first 5 issues
+            if len(level_issues) > 5:
+                errors.append(f"... and {len(level_issues) - 5} more level issues")
+    except Exception as e:
+        errors.append(f"Error validating Level field: {str(e)}")
+    
+    # Return results
+    if errors:
+        return False, errors
+    
+    return True, []
 
 
 def main(csv_path_arg=None):
@@ -72,12 +191,55 @@ def main(csv_path_arg=None):
 
     # Get CSV path (prefer dragged file, fallback to default location)
     csv_path = get_csv_path(csv_path_arg)
+    
+    # Check if CSV exists
+    if csv_path is None:
+        print("\n" + "=" * 70)
+        print("ERROR: CSV file not found")
+        print("=" * 70)
+        
+        if csv_path_arg:
+            print(f"\nThe file you specified was not found:")
+            print(f"  {Path(csv_path_arg).absolute()}")
+        else:
+            print(f"\nNo Spells.csv file found in the expected location:")
+            print(f"  {exe_dir / 'Spells.csv'}")
+        
+        print("\nTo use this tool:")
+        print("  1. Place a file named 'Spells.csv' in the same folder as this executable")
+        print("  2. OR drag and drop your CSV file onto this executable")
+        print("\nThe CSV file must contain spell data with the following columns:")
+        print("  Name, Level, School, Casting Time, Range, Components, Duration, Text")
+        print("=" * 70)
+        return False
+    
+    # Validate CSV structure
+    print(f"Validating CSV file: {csv_path.name}...")
+    is_valid, validation_errors = validate_csv(csv_path)
+    
+    if not is_valid:
+        print("\n" + "=" * 70)
+        print("ERROR: CSV file validation failed")
+        print("=" * 70)
+        print(f"\nFile: {csv_path}")
+        print("\nProblems found:")
+        for i, error in enumerate(validation_errors, 1):
+            print(f"  {i}. {error}")
+        print("\nPlease fix these issues and try again.")
+        print("=" * 70)
+        return False
+    
+    print("✓ CSV validation passed")
 
-    # Inform user which CSV file is being used
+    # Determine output directory: same as exe if CSV was dragged, otherwise current directory
     if csv_path_arg:
+        output_dir = exe_dir / "out"
         print(f"Using CSV file: {csv_path} (dragged onto EXE)")
+        print(f"Output directory: {output_dir}")
     else:
+        output_dir = Path.cwd() / "out"
         print(f"Using CSV file: {csv_path} (default location)")
+        print(f"Output directory: {output_dir}")
 
     paths = {
         # CSV file - prefer dragged file, otherwise in same folder as EXE
@@ -91,9 +253,9 @@ def main(csv_path_arg=None):
         "card_double": base / "card-double.html",
         "card_triple": base / "card-triple.html",
         "js": base / "autosize.js",
-        # Output files go to current working directory (where user runs the EXE)
-        "out_html": Path("spell_cards.html"),
-        "out_js": Path("autosize.js")
+        # Output files go to output directory
+        "out_html": output_dir / "spell_cards.html",
+        "out_js": output_dir / "autosize.js"
     }
 
     css, page, card_single, card_double, card_triple, js = [
@@ -169,11 +331,18 @@ def main(csv_path_arg=None):
 
     html = page.replace(
         '/*{{STYLES}}*/', css).replace('<!--{{CARDS}}-->', ''.join(cards))
-    Path("out").mkdir(exist_ok=True)
+    
+    # Create output directory
+    output_dir.mkdir(exist_ok=True, parents=True)
+    
     paths["out_html"].write_text(html, encoding='utf-8')
     paths["out_js"].write_text(js, encoding='utf-8')
 
-    print(f"Exported {len(cards)} cards to {paths['out_html']}")
+    print(f"\n✓ Successfully exported {len(cards)} cards")
+    print(f"  HTML: {paths['out_html']}")
+    print(f"  JS:   {paths['out_js']}")
+    
+    return True
 
 
 if __name__ == "__main__":
@@ -201,40 +370,59 @@ if __name__ == "__main__":
     )
     parser.add_argument('csv_file', nargs='?',
                         help='CSV file to process (can be dragged onto EXE)')
+    parser.add_argument('--loop', '-l', action='store_true',
+                        help='Run in regeneration loop (press ENTER to regenerate, ESC to exit)')
     parser.add_argument('--dev', '-d', action='store_true',
-                        help='Developer mode: run once and exit (no interactive input)')
+                        help='Developer mode: run once and exit immediately (no user input)')
     args = parser.parse_args()
 
     # Get CSV path from command line (drag & drop) or None
     csv_path_arg = args.csv_file if args.csv_file else None
 
-    # If dev mode, run main once and exit
+    # If dev mode, run main once and exit immediately
     if args.dev:
-        main(csv_path_arg)
-        sys.exit(0)
+        success = main(csv_path_arg)
+        sys.exit(0 if success else 1)
 
-    def user_input():
-        print("\nPress ENTER to (re)generate or ESC to exit...", flush=True)
-        return keyboard.read_key(suppress=True)
-    try:
-        # Create closure to capture csv_path_arg
-        def main_with_csv():
-            main(csv_path_arg)
+    # Run main once
+    success = main(csv_path_arg)
+    
+    # If main failed, wait for user input and exit
+    if not success:
+        print("\nPress any key to exit...")
+        input()
+        sys.exit(1)
 
-        options = {
-            'enter': main_with_csv,
-            'esc': lambda: sys.exit(0)
-        }
+    # If loop mode, enter regeneration loop
+    if args.loop:
+        def user_input():
+            print("\nPress ENTER to (re)generate or ESC to exit...", flush=True)
+            return keyboard.read_key(suppress=True)
+        
+        try:
+            def main_with_csv():
+                success = main(csv_path_arg)
+                if not success:
+                    print("\nGeneration failed. Press ESC to exit or ENTER to try again...")
 
-        while True:
-            try:
-                options[user_input()]()
-            except KeyboardInterrupt:
-                sys.exit(0)
-            except KeyError as e:
-                pass
-    finally:
-        keyboard.unhook_all()
+            options = {
+                'enter': main_with_csv,
+                'esc': lambda: sys.exit(0)
+            }
+
+            while True:
+                try:
+                    options[user_input()]()
+                except KeyboardInterrupt:
+                    sys.exit(0)
+                except KeyError:
+                    pass
+        finally:
+            keyboard.unhook_all()
+    else:
+        # Default: wait for user input before closing
+        print("\nPress any key to exit...")
+        input()
 
 # TODO: check Chaos Bolt, Clone, Conjure Giant, Control Flames, Creation, Divine Word, Doom of Stacked Stones, Greater Restoration, Guardian of Nature
 # TODO: fix damage type coloring on Tasha's Otherworldly Guise text
