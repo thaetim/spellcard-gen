@@ -35,7 +35,18 @@ This reduces visual clutter while highlighting important spell properties at a g
 
 ## Usage
 
-### Basic Usage
+### For End Users (Windows)
+
+Download the latest release from [GitHub Releases](https://github.com/YourUsername/spellcard-generator/releases).
+
+1. Download `spellcard-generator-vX.X.X-windows.zip`
+2. Extract to a folder
+3. See `INSTALL.txt` for quick start
+4. Read `USAGE.md` for detailed instructions
+
+### For Developers (Run from Source)
+
+#### Basic Usage
 ```bash
 python generate.py
 ```
@@ -138,6 +149,43 @@ Install with: `pip install -r requirements.txt`
 - **Single**: Standard spell description (<800 chars)
 - **Double**: Long spell split across two cards
 - **Triple**: Very long spell split across three cards
+
+## Documentation
+
+- **[USAGE.md](USAGE.md)** - Complete user guide for D&D players
+- **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** - How to create GitHub releases
+- **[RELEASE_QUICK.md](RELEASE_QUICK.md)** - Quick reference for releases
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
+- **[DATA_MANIPULATION.md](DATA_MANIPULATION.md)** - CSV data processing details
+
+## Building Executables
+
+### PyInstaller (Recommended)
+```bash
+python build-pyinstaller.py
+
+# Or for standalone folder (better AV compatibility)
+python build-pyinstaller.py --standalone
+```
+
+### Nuitka (Alternative)
+```bash
+python build-nuitka.py
+
+# Or without link-time optimization (may reduce AV false positives)
+python build-nuitka.py --no-lto
+```
+
+Output: `build/spellcard-generator_X.X.X.exe`
+
+### Creating a Release Package
+```bash
+python create_release.py
+```
+
+Output: `release/spellcard-generator-vX.X.X-windows.zip`
+
+See [RELEASE_GUIDE.md](RELEASE_GUIDE.md) for complete release instructions.
 
 ## License
 
