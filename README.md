@@ -37,7 +37,7 @@ This reduces visual clutter while highlighting important spell properties at a g
 
 ### For End Users (Windows)
 
-Download the latest release from [GitHub Releases](https://github.com/YourUsername/spellcard-generator/releases).
+Download the latest release from [GitHub Releases](https://github.com/thaetim/spellcard-gen/releases/latest).
 
 1. Download `spellcard-generator-vX.X.X-windows.zip`
 2. Extract to a folder
