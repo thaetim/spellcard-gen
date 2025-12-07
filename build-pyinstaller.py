@@ -202,10 +202,7 @@ def main():
         "--collect-all=keyboard",
     ]
 
-    # Add version info
-    pyinstaller_cmd.extend([
-        f"--version-file=NONE",  # We'll add metadata manually if needed
-    ])
+    # Version info - skip for now, can be added later with a proper version info file
 
     # Single file vs standalone folder
     if args.standalone:
