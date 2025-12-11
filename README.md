@@ -1,73 +1,38 @@
 # Spellcard Generator - Complete Guide
 
 Generates printable D&D 5e spell cards from CSV data exported from 5e.tools or other sources.
+## Features
 
-## Overview
-
-This tool converts spell data into professionally formatted, print-ready spell cards. It automatically processes spell text, applies abbreviations, colorizes damage types, and intelligently sizes cards based on content length (single, double, or triple width).
+Cards sized automatically into single, double, or triple-width based on text length; Common D&D terms abbreviated (HP, AC, CR, etc.); Colorized dice rolls and damage types;
 
 ![preview](assets/preview.png)
 
-## Features
+Smart attribute display - "Concentration" badge replaces "Duration" label; "or Ritual" badge replaces "Casting Time" label; Range area type (e.g., "Self Radius", "Touch Cone") badge replaces "Range" label;
 
-- **Automatic card sizing**: Single, double, or triple-width cards based on text length
-- **Smart attribute display**: Special spell properties shown as badges instead of generic labels
-- **Smart text formatting**: Enumerations converted to tables, broken line breaks fixed
-- **Damage type colorization**: Damage types highlighted in color
-- **Abbreviations**: Common D&D terms shortened (HP, AC, CR, etc.)
-- **Duplicate merging**: Combines duplicate spell entries, keeping longest text versions
-- **Manual overrides**: `data/Spells-fixed.csv` for correcting problematic spells
-- **Print optimization**: Cards arranged for efficient printing
-- **Easy setup**: Both executable and Python versions available
+![attr-display-ritual](assets/attr-display-ritual.png)![attr-display-range](assets/attr-display-range.png)
 
-### Smart Attribute Display
+## Usage
 
-The attribute table shows spell properties with context-aware labeling:
-- **Concentration spells**: "Concentration" badge replaces "Duration" label
-- **Ritual spells**: "or Ritual" badge replaces "Casting Time" label  
-- **Area effects**: Range shows area type (e.g., "Self Radius", "Touch Cone")
+1. Download the latest `spellcard-generator_X.X.X.exe` from the [Releases section](https://github.com/thaetim/spellcard-gen/releases/latest)
+2. Get Spells
+	1. Go to [5e.tools Spell Table](https://2014.5e.tools/spells.html)	
+	2. Select spells either by using list filters or pressing `P` on individual spells to pin them (takes precedence over filters)
+	3. Open the Table View and click Export to CSV
+3. Run options
+	- Dragging the downloaded CSV file onto the exe
+	- Placing your `Spells.csv` file in the same folder as the exe and double-clicking the `spellcard-generator_X.X.X.exe`
+4. Open `out/spell_cards.html` and hit `Ctrl+P` (`Cmd+P` on Mac):
+	- Layout: **Portrait
+	- Margins: **None** or **Minimum**
+	- Scale: **100%**
+	- Background graphics: **Enabled** (to show colors)
+5. Print or save as PDF
 
-![attr-display-ritual](assets/attr-display-ritual.png)
-![attr-display-range](assets/attr-display-range.png)
+> **Tip**: To get more spell sources - before the spell selection, do either or both of those:
+> - Utilities / Load All Partnered Content (optional, to see all available sources)
+> - Utilities / Homebrew Manager > Get Homebrew (blue button) > Select desired > Add Selected (blue ⤓ download button)
 
-## Quick Start
-
-### Option 1: Simple Usage (Recommended for Most Users)
-
-1. **Download the executable**: Get `spellcard-generator_X.X.X.exe` from [GitHub Releases](https://github.com/thaetim/spellcard-gen/releases/latest)
-2. **Get your spell data** (see below for how to get CSV from 5e.tools)
-3. **Place your CSV file** in the same folder as the exe (default: `Spells.csv`)
-4. **Run the program**: Double-click `spellcard-generator_X.X.X.exe`
-5. **Find your cards**: Open `out/spell_cards.html` in your browser
-
-### Option 2: Drag and Drop
-
-1. **Drag your CSV file** onto the exe
-2. Cards will be generated in the `out/` folder next to the exe
-3. Press any key to close when done
-
----
-
-## Getting Spell Data from 5e.tools
-
-### Step-by-Step Guide
-
-1. **Go to 5e.tools Spells Table**: [https://2014.5e.tools/spells.html](https://2014.5e.tools/spells.html)
-
-2. **Set up your spell list:**
-   - **Utilities / Load All Partnered Content** (optional, to see all available sources)
-   - **Utilities / Homebrew Manager** > Get Homebrew (blue button) > Select desired > Add Selected (blue ⤓ download button)
-   - Adjust the Filters to find spells you want
-
-3. **Select spells:**
-   - **Option A (Filtered list)**: Use filters and take all visible spells
-   - **Option B (Pinned list)**: Press `P` on individual spells to pin them (takes precedence over filters)
-
-4. **Export to CSV:**
-   - Open the **Table View** (look for table icon/button)
-   - Click **Export to CSV** button
-   - Save as `Spells.csv` in your working directory
-
+## Notes
 ### Sampling for Large Lists
 
 By default, if your CSV contains more than **200 spells**, the script generates only a **sample of 69 spells** to speed up development. The sample includes:
@@ -77,23 +42,19 @@ By default, if your CSV contains more than **200 spells**, the script generates 
 **To generate all spells**, you'll need to edit the source code or use the executable version which doesn't have this limitation.
 
 > **Warning**: Generating large spell lists (200+ spells) can cause the browser's font autosizing JavaScript to take several minutes to complete.
-
----
-
 ## Input Data Requirements
-
 Your CSV file must contain spell data with these columns:
 
-| Column | Description | Example |
-|--------|-------------|---------|
-| **Name** | Spell name | `"Fireball"` |
-| **Level** | Spell level | `"3rd"` or `"3"` or `"Cantrip"` |
-| **School** | School of magic | `"Evocation"` |
-| **Casting Time** | Time to cast | `"Action"` or `"1 Action"` |
-| **Range** | Spell range | `"150 feet"` or `"Self"` |
-| **Components** | V, S, M components | `"V, S, M (a tiny ball of bat guano)"` |
-| **Duration** | How long it lasts | `"Instantaneous"` or `"Concentration, up to 1 minute"` |
-| **Text** | Spell description | Full spell text with formatting |
+| Column           | Description        | Example                                                |
+| ---------------- | ------------------ | ------------------------------------------------------ |
+| **Name**         | Spell name         | `"Fireball"`                                           |
+| **Level**        | Spell level        | `"3rd"` or `"3"` or `"Cantrip"`                        |
+| **School**       | School of magic    | `"Evocation"`                                          |
+| **Casting Time** | Time to cast       | `"Action"` or `"1 Action"`                             |
+| **Range**        | Spell range        | `"150 feet"` or `"Self"`                               |
+| **Components**   | V, S, M components | `"V, S, M (a tiny ball of bat guano)"`                 |
+| **Duration**     | How long it lasts  | `"Instantaneous"` or `"Concentration, up to 1 minute"` |
+| **Text**         | Spell description  | Full spell text with formatting                        |
 
 **Optional columns** (will be included if present):
 - `Source` - Book abbreviation (e.g., "PHB", "XGE")
@@ -104,7 +65,7 @@ Your CSV file must contain spell data with these columns:
 
 ### CSV Format Requirements
 
-✅ **Correct formatting:**
+**Correct formatting:**
 - Save file as UTF-8 encoding
 - Use double quotes `""` around fields containing commas or newlines
 - Fields with special characters must be quoted
@@ -117,23 +78,7 @@ Your CSV file must contain spell data with these columns:
 ```
 
 ---
-
-## Running the Program
-
-### Basic Usage (No Loop Mode)
-
-```bash
-# Windows: Double-click the exe, or run from command line
-spellcard-generator_1.0.0.exe
-```
-
-**What happens:**
-1. Program looks for `Spells.csv` in the same folder
-2. Validates the CSV file
-3. Generates spell cards
-4. Saves output to `out/spell_cards.html`
-5. Waits for you to press any key before closing
-
+## Other modes
 ### Loop Mode (For Development/Testing)
 
 ```bash
@@ -172,52 +117,6 @@ python generate.py --dev
 # Watch mode (auto-regenerate on changes)
 python runwatch.py
 ```
-
----
-
-## Understanding the Output
-
-### Generated Files
-
-After running, you'll find these files in the `out/` folder:
-
-```
-out/
-├── spell_cards.html    # Open this in your web browser
-└── autosize.js         # Required JavaScript (don't delete)
-```
-
-### Opening Your Spell Cards
-
-1. Navigate to the `out/` folder
-2. Double-click `spell_cards.html`
-3. Your default browser will open showing all your spell cards
-
-### Card Layout
-
-Cards are automatically organized for efficient printing:
-- **Triple-wide cards** (very long spells) take a full row (3 slots)
-- **Double-wide cards** (long spells) take 2 slots
-- **Single cards** (normal spells) take 1 slot
-- Double-wide and single cards are interleaved to minimize wasted space
-
-### Printing Your Cards
-
-1. Open `spell_cards.html` in your browser
-2. Press **Ctrl+P** (or Cmd+P on Mac)
-3. **Print settings:**
-   - Layout: **Portrait**
-   - Margins: **None** or **Minimum**
-   - Scale: **100%**
-   - Background graphics: **Enabled** (to show colors)
-4. Print or save as PDF
-
-**Recommended paper:**
-- Standard letter size (8.5" × 11")
-- Cardstock (for durability)
-- Print double-sided if possible
-
----
 
 ## Manual Corrections
 
@@ -264,54 +163,7 @@ Contains manually corrected spell data to override automatic processing. The scr
 - Or run from Python source code if concerned
 
 ---
-
-## Tips and Best Practices
-
-### Organizing Your Spells
-
-**Create separate CSV files for different purposes:**
-```
-MySpells/
-├── Wizard_Prepared.csv      # Spells you have prepared
-├── Wizard_Spellbook.csv     # All spells in your spellbook
-├── Party_Ritual.csv         # Ritual spells for the party
-└── Backup_Scrolls.csv       # Scrolls you're carrying
-```
-
-### Updating Your Cards
-
-**Quick workflow for frequent updates:**
-1. Run with `--loop` flag
-2. Edit your CSV in Excel/Google Sheets
-3. Save the CSV
-4. Press **ENTER** in the program window
-5. Refresh your browser to see changes
-
-### Preparing for Game Session
-
-1. Generate cards for your prepared spells
-2. Print on cardstock
-3. Cut out the cards
-4. Organize by spell level
-5. Keep in a deck box or binder
-
-### Multiple Characters Setup
-
-```
-D&D/
-├── Wizard/
-│   ├── spellcard-generator.exe
-│   ├── Spells.csv (wizard spells)
-│   └── out/spell_cards.html
-└── Cleric/
-    ├── spellcard-generator.exe (copy)
-    ├── Spells.csv (cleric spells)
-    └── out/spell_cards.html
-```
-
----
-
-## File Structure
+## Repo File Structure
 
 - `generate.py` - Main entry point
 - `runwatch.py` - File watcher for auto-regeneration
@@ -322,32 +174,8 @@ D&D/
 - `templates/` - HTML/CSS templates for cards
 - `data/Spells-fixed.csv` - Manual spell corrections
 - `data/Spells.csv` - Input data (place your CSV here)
-
-## Requirements for Python Version
-
-```
-pandas==2.3.3
-watchdog==6.0.0
-```
-
-Install with: `pip install -r requirements.txt`
-
 ## License
 
 See LICENSE file.
-
-## Support
-
-**Found a bug?** Open an issue on the project's GitHub repository.
-
-**Need help?** Check the error messages - they usually tell you exactly what's wrong and how to fix it.
-
-**Want to contribute?** See the source code for development setup instructions.
-
----
-
-## Credits
-
-Spellcard Generator - A tool for D&D players
 
 **Note:** This tool generates spell cards for personal use. All spell data is copyright Wizards of the Coast. Use responsibly and respect intellectual property rights.
