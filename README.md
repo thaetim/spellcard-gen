@@ -28,7 +28,8 @@ Smart attribute display - "Concentration" badge replaces "Duration" label; "or R
 	- Background graphics: **Enabled** (to show colors)
 5. Print or save as PDF
 
-> [!TIP] Getting more spell sources
+> [!TIP]
+> #### Getting more spell sources
 > Before the spell selection, do either or both:
 > - Utilities / Load All Partnered Content (optional, to see all available sources)
 > - Utilities / Homebrew Manager > Get Homebrew (blue button) > Select desired > Add Selected (blue ⤓ download button)
