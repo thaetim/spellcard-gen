@@ -28,7 +28,7 @@ Smart attribute display - "Concentration" badge replaces "Duration" label; "or R
 	- Background graphics: **Enabled** (to show colors)
 5. Print or save as PDF
 
-> [!TIP]+ Getting more spell sources
+> [!TIP] Getting more spell sources
 > Before the spell selection, do either or both:
 > - Utilities / Load All Partnered Content (optional, to see all available sources)
 > - Utilities / Homebrew Manager > Get Homebrew (blue button) > Select desired > Add Selected (blue ⤓ download button)
@@ -42,7 +42,7 @@ By default, if your CSV contains more than **200 spells**, the script generates 
 
 **To generate all spells**, you'll need to edit the source code or use the executable version which doesn't have this limitation.
 
-> [!WARNING]+
+> [!WARNING]
 > Generating large spell lists (200+ spells) can cause the browser's font autosizing JavaScript to take several minutes to complete.
 
 ## Input Data Requirements
