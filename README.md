@@ -33,8 +33,8 @@ Smart attribute display - "Concentration" badge replaces "Duration" label; "or R
 > [!TIP]
 > #### Getting more spell sources
 > Before the spell selection, do either or both:
-> - Utilities / Load All Partnered Content (optional, to see all available sources)
-> - Utilities / Homebrew Manager > Get Homebrew (blue button) > Select desired > Add Selected (blue ⤓ download button)
+> - Utilities / Load All Partnered Content (optional, to see all available sources) ![util-partnered](assets/util-partnered.png)
+> - Utilities / Homebrew Manager ![util-homebrew-mng](assets/util-homebrew-mng.png) > Get Homebrew ![blue button](assets/btn-get-homebrew.png) > Select your desired sources > Add Selected ![blue ⤓ download button](assets/btn-download-icon.png)
 
 ## Notes
 ### Sampling for Large Lists
