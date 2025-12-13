@@ -16,13 +16,13 @@ Smart attribute display - "Concentration" badge replaces "Duration" label; "or R
 1. Download the latest `spellcard-generator_X.X.X.exe` from the [Releases section](https://github.com/thaetim/spellcard-gen/releases/latest)
 2. Get Spells
 	1. Go to [5e.tools Spell Table](https://2014.5e.tools/spells.html)	
-	2. Select spells either by using list filters or pressing `P` on individual spells to pin them (takes precedence over filters)
+	2. Select spells either by using list filters or pressing `P` on individual spells to pin them (pinned list will be shown instead of the filtered list)
 	3. Open the Table View and click Export to CSV
 3. Run options
 	- Dragging the downloaded CSV file onto the exe
 	- Placing your `Spells.csv` file in the same folder as the exe and double-clicking the `spellcard-generator_X.X.X.exe`
 4. Open `out/spell_cards.html` and hit `Ctrl+P` (`Cmd+P` on Mac):
-	- Layout: **Portrait
+	- Layout: **Portrait**
 	- Margins: **None** or **Minimum**
 	- Scale: **100%**
 	- Background graphics: **Enabled** (to show colors)
