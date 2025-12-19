@@ -1,40 +1,52 @@
 @page {
     size: A4;
     margin: 0;
+    padding: 0;
 }
 
-@media print {
+/* @media print {
     body {
-        transform: scale(1.08);
+        transform: scale(0.95);
         transform-origin: top left;
     }
+} */
+
+.page-div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    width: 100%;
+    padding-top: 0.5in;
+    page-break-inside: avoid;
 }
 
 /* ===== LAYOUT & CONTAINERS ===== */
 body {
     margin: 0;
-    padding: 8mm;
+    /* padding: 0.1in; */
     background: #fff;
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    align-content: flex-start;
+    align-content: space-between;
 }
 
 /* ===== CARD CONTAINERS ===== */
-.card-single {
-    width: 58mm;
-    height: 82mm;
+.card {
     display: flex;
     flex-direction: column;
     border: 1pt solid var(--card-border, #000);
     background: #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     page-break-inside: avoid;
     overflow: hidden;
+    --card-width: 2.5in;
+    --card-height: 3.5in;
 }
 
-.card {
+.card-single {
+    width: var(--card-width);
+    height: var(--card-height);
     display: flex;
     flex-direction: column;
     border: 1pt solid var(--card-border, #000);
@@ -45,13 +57,13 @@ body {
 }
 
 .card-triple {
-    width: calc(58mm * 3);
-    height: 82mm;
+    width: calc(var(--card-width) * 3);
+    height: var(--card-height);
 }
 
 .card-double {
-    width: calc(58mm * 2);
-    height: 82mm;
+    width: calc(var(--card-width) * 2);
+    height: var(--card-height);
 }
 
 .card-header-group,
@@ -109,7 +121,7 @@ body {
 
 .card-columns {
     column-count: 3;
-    column-width: 48mm;
+    column-width: 2.3in;
     column-gap: 15pt;
     column-fill: balance;
     height: 100%;
@@ -117,7 +129,7 @@ body {
 
 .card-double .card-columns {
     column-count: 2;
-    column-width: 48mm;
+    column-width: 2.3in;
     column-gap: 15pt;
     column-fill: balance;
     height: 100%;
