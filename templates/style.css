@@ -3,6 +3,13 @@
     margin: 0;
 }
 
+@media print {
+    body {
+        transform: scale(1.08);
+        transform-origin: top left;
+    }
+}
+
 /* ===== LAYOUT & CONTAINERS ===== */
 body {
     margin: 0;
@@ -82,7 +89,7 @@ body {
     flex: 1;
 }
 
-.card-header + .card-header {
+.card-header+.card-header {
     border-left: 1pt solid #ffffff0f;
 }
 
@@ -141,7 +148,7 @@ body {
     flex: 1;
 }
 
-.card-footer + .card-footer {
+.card-footer+.card-footer {
     border-left: 1pt solid #ffffff0f;
 }
 
@@ -461,16 +468,16 @@ body {
     --fire: #f00;
     --acid: #0f0;
     --force: #00f;
-    
+
     --radiant: #ff0;
     --NULL: #0ff;
     --poison: #f0f;
-    
+
     --lightning: #f80;
     --thunder: #0f8;
     --psychic: #f08;
     --cold: #08f;
-    
+
     --bludgeoning: #88f;
     --piercing: #f88;
     --slashing: #8f8;
